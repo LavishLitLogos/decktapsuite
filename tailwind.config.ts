@@ -11,9 +11,10 @@ export default {
   theme: {
   	extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans], // Use CSS variable for sans
-        heading: ["var(--font-heading)", ...fontFamily.sans], // Use CSS variable for heading
-        mono: ["var(--font-mono)", ...fontFamily.mono], // Use CSS variable for mono
+        sans: ["var(--font-sans)", ...fontFamily.sans], // Use CSS variable for sans (Anton)
+        heading: ["var(--font-heading)", ...fontFamily.sans], // Use CSS variable for heading (Anton)
+        // Keep mono if needed, otherwise remove
+        // mono: ["var(--font-mono)", ...fontFamily.mono],
       },
   		colors: {
   			background: 'hsl(var(--background))',

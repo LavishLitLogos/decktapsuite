@@ -3,94 +3,94 @@
 @tailwind utilities;
 
 body {
-  /* Use Geist Sans as default, allow override */
+  /* Use font-sans (Anton) as default */
 }
 
 @layer base {
   :root {
-    /* Deep Forest Green Theme */
-    --background: 158 98% 10%; /* Dark Green */
+    /* Darker Forest Green Theme */
+    --background: 120 100% 5%; /* Very Dark Green */
     --foreground: 48 100% 95%; /* Light Gold/Off-white */
 
-    --card: 158 80% 15%; /* Slightly Lighter Dark Green */
+    --card: 120 85% 8%; /* Slightly Lighter Dark Green */
     --card-foreground: 48 100% 95%; /* Light Gold/Off-white */
 
-    --popover: 158 98% 8%; /* Darker Green */
+    --popover: 120 100% 4%; /* Even Darker Green */
     --popover-foreground: 48 100% 95%; /* Light Gold/Off-white */
 
     --primary: 51 100% 50%; /* Gold */
-    --primary-foreground: 158 98% 10%; /* Dark Green for contrast on Gold */
+    --primary-foreground: 120 100% 5%; /* Dark Green for contrast on Gold */
 
-    --secondary: 158 60% 25%; /* Muted Green */
+    --secondary: 120 70% 12%; /* Muted Dark Green */
     --secondary-foreground: 51 100% 80%; /* Lighter Gold */
 
-    --muted: 158 50% 30%; /* Muted Green */
+    --muted: 120 60% 15%; /* Muted Dark Green */
     --muted-foreground: 48 50% 85%; /* Muted Light Gold */
 
     --accent: 51 80% 60%; /* Lighter Gold */
-    --accent-foreground: 158 98% 10%; /* Dark Green */
+    --accent-foreground: 120 100% 5%; /* Dark Green */
 
     --destructive: 0 72% 51%; /* Red */
     --destructive-foreground: 0 0% 98%; /* Light Gray */
 
-    --border: 158 50% 30%; /* Muted Green */
-    --input: 158 50% 30%; /* Muted Green */
+    --border: 120 60% 15%; /* Muted Dark Green */
+    --input: 120 60% 15%; /* Muted Dark Green */
     --ring: 51 100% 50%; /* Gold */
 
     --radius: 0.5rem;
 
     /* Chart colors (adjust if needed) */
     --chart-1: 51 100% 50%; /* Gold */
-    --chart-2: 158 60% 45%;
-    --chart-3: 158 80% 30%;
+    --chart-2: 120 60% 35%;
+    --chart-3: 120 80% 20%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
     /* Sidebar specific colors (can inherit or customize) */
-    --sidebar-background: 158 98% 8%; /* Darker Green */
+    --sidebar-background: 120 100% 4%; /* Even Darker Green */
     --sidebar-foreground: 48 100% 95%; /* Light Gold/Off-white */
     --sidebar-primary: 51 100% 50%; /* Gold */
-    --sidebar-primary-foreground: 158 98% 10%;
-    --sidebar-accent: 158 60% 25%; /* Muted Green */
+    --sidebar-primary-foreground: 120 100% 5%;
+    --sidebar-accent: 120 70% 12%; /* Muted Dark Green */
     --sidebar-accent-foreground: 51 100% 80%; /* Lighter Gold */
-    --sidebar-border: 158 50% 30%; /* Muted Green */
+    --sidebar-border: 120 60% 15%; /* Muted Dark Green */
     --sidebar-ring: 51 100% 50%; /* Gold */
   }
 
   /* Keep dark mode consistent or adjust if needed */
   .dark {
-     /* Using the same theme for dark mode for consistency, could be inverted */
-    --background: 158 98% 10%;
+     /* Using the same theme for dark mode for consistency */
+    --background: 120 100% 5%;
     --foreground: 48 100% 95%;
-    --card: 158 80% 15%;
+    --card: 120 85% 8%;
     --card-foreground: 48 100% 95%;
-    --popover: 158 98% 8%;
+    --popover: 120 100% 4%;
     --popover-foreground: 48 100% 95%;
     --primary: 51 100% 50%;
-    --primary-foreground: 158 98% 10%;
-    --secondary: 158 60% 25%;
+    --primary-foreground: 120 100% 5%;
+    --secondary: 120 70% 12%;
     --secondary-foreground: 51 100% 80%;
-    --muted: 158 50% 30%;
+    --muted: 120 60% 15%;
     --muted-foreground: 48 50% 85%;
     --accent: 51 80% 60%;
-    --accent-foreground: 158 98% 10%;
+    --accent-foreground: 120 100% 5%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
-    --border: 158 50% 30%;
-    --input: 158 50% 30%;
+    --border: 120 60% 15%;
+    --input: 120 60% 15%;
     --ring: 51 100% 50%;
     --chart-1: 51 100% 50%;
-    --chart-2: 158 60% 45%;
-    --chart-3: 158 80% 30%;
+    --chart-2: 120 60% 35%;
+    --chart-3: 120 80% 20%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --sidebar-background: 158 98% 8%;
+    --sidebar-background: 120 100% 4%;
     --sidebar-foreground: 48 100% 95%;
     --sidebar-primary: 51 100% 50%;
-    --sidebar-primary-foreground: 158 98% 10%;
-    --sidebar-accent: 158 60% 25%;
+    --sidebar-primary-foreground: 120 100% 5%;
+    --sidebar-accent: 120 70% 12%;
     --sidebar-accent-foreground: 51 100% 80%;
-    --sidebar-border: 158 50% 30%;
+    --sidebar-border: 120 60% 15%;
     --sidebar-ring: 51 100% 50%;
   }
 }
@@ -100,13 +100,13 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans; /* Use sans variable */
+    @apply bg-background text-foreground font-sans; /* Use Anton (via --font-sans) */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading; /* Apply heading font */
+    @apply font-heading; /* Apply Anton (via --font-heading) */
   }
 }
 
