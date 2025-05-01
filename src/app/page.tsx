@@ -107,28 +107,51 @@ export default function Home() {
       if (file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          newItems.push({
-            id: crypto.randomUUID(),
-            imageUrl: e.target?.result as string,
-            link: "", // Initialize link as empty
-          });
-          // Check if all files are processed
-          if (newItems.length === files.filter(f => f.type.startsWith("image/")).length) {
-            setDeckItems(prev => [...prev, ...newItems]);
-            // Only generate link if min images are met after adding new ones
-            if (deckItems.length + newItems.length >= MIN_IMAGES) {
-             generateShareables([...deckItems, ...newItems], transitionStyle);
-            } else {
-               setShareLink(null);
-               setEmbedCode(null);
+          try {
+            newItems.push({
+              id: crypto.randomUUID(),
+              imageUrl: e.target?.result as string,
+              link: "", // Initialize link as empty
+            });
+            // Check if all files are processed
+            if (newItems.length === files.filter(f => f.type.startsWith("image/")).length) {
+              setDeckItems(prev => [...prev, ...newItems]);
+              // Only generate link if min images are met after adding new ones
+              if (deckItems.length + newItems.length >= MIN_IMAGES) {
+               generateShareables([...deckItems, ...newItems], transitionStyle);
+              } else {
+                 setShareLink(null);
+                 setEmbedCode(null);
+              }
             }
+          } catch (error: any) {
+             toast({
+              title: "Error Processing Image",
+              description: `Could not process image ${file.name}: ${error.message}`,
+              variant: "destructive",
+             });
           }
         };
-        reader.readAsDataURL(file);
+        reader.onerror = (error) => {
+           toast({
+            title: "Error Reading File",
+            description: `Could not read file ${file.name}.`,
+            variant: "destructive",
+          });
+        }
+        try {
+          reader.readAsDataURL(file);
+        } catch (error: any) {
+           toast({
+            title: "Error Reading File",
+            description: `Could not read file ${file.name}: ${error.message}`,
+            variant: "destructive",
+           });
+        }
       } else {
          toast({
             title: "Invalid File Type",
-            description: `${file.name} is not a valid image file.`,
+            description: `${file.name} is not a valid image file. Please upload images only.`,
             variant: "destructive",
          })
       }
@@ -193,12 +216,32 @@ export default function Home() {
     timeoutRef.current = setTimeout(() => {
       if (items.length < MIN_IMAGES) return; // Don't generate if not enough images
 
-      const data = { items, style };
-      const encodedData = btoa(JSON.stringify(data)); // Base64 encode
-      const shareUrl = `${window.location.origin}/view#${encodedData}`;
-      const embedHtml = `<iframe src="${shareUrl}" width="320" height="420" frameborder="0" allowfullscreen></iframe>`; // Adjust dimensions
-      setShareLink(shareUrl);
-      setEmbedCode(embedHtml);
+      try {
+        const data = { items, style };
+        let encodedData;
+        try {
+            encodedData = btoa(JSON.stringify(data)); // Base64 encode
+        } catch (error: any) {
+             toast({
+              title: "Error Encoding Data",
+              description: `Could not encode deck data: ${error.message}`,
+              variant: "destructive",
+             });
+             return; // Stop execution if encoding fails
+        }
+
+        let origin = '';
+        try {
+           origin = window.location.origin;
+        } catch (error: any) {
+           toast({ title: "Browser Error", description: "Could not determine site origin.", variant: "destructive" });
+           return;
+        }
+        const shareUrl = `${origin}/view#${encodedData}`;
+        const embedHtml = `<iframe src="${shareUrl}" width="320" height="420" frameborder="0" allowfullscreen></iframe>`; // Adjust dimensions
+        setShareLink(shareUrl);
+        setEmbedCode(embedHtml);
+      } catch (error: any) { /* Generic catch for other potential errors within timeout */ }
     }, 300); // Adjust the delay (in milliseconds) as needed
   }, []);
 
@@ -214,8 +257,16 @@ export default function Home() {
         },
         body: JSON.stringify({
           successUrl: `${window.location.origin}/?success=true`, // Redirect back here on success
-          origin: window.location.origin, // Send origin for cancel URL construction
+          origin: (() => {
+            try {
+              return window.location.origin;
+            } catch (error: any) {
+              toast({ title: "Browser Error", description: "Could not determine site origin for upgrade.", variant: "destructive" });
+              return ""; // Return empty string if origin is not available
+            }
+          })(), // Send origin for cancel URL construction
         }),
+
       });
 
       const data = await response.json();
