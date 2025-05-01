@@ -6,90 +6,92 @@
 
 @layer base {
   :root {
-    /* Darker Forest Green Theme */
-    --background: 120 100% 5%; /* Very Dark Green */
+    /* Very Dark Forest Green Theme (Almost Black) */
+    --background: 120 100% 3%; /* Very Dark Green */
     --foreground: 48 100% 95%; /* Light Gold/Off-white */
 
-    --card: 120 85% 8%; /* Slightly Lighter Dark Green */
+    --card: 120 85% 5%; /* Slightly Lighter Dark Green */
     --card-foreground: 48 100% 95%; /* Light Gold/Off-white */
 
-    --popover: 120 100% 4%; /* Even Darker Green */
+    --popover: 120 100% 2%; /* Even Darker Green */
     --popover-foreground: 48 100% 95%; /* Light Gold/Off-white */
 
-    --primary: 51 100% 50%; /* Gold */
-    --primary-foreground: 120 100% 5%; /* Dark Green for contrast on Gold */
+    --primary: 51 100% 55%; /* Slightly brighter Gold */
+    --primary-foreground: 120 100% 3%; /* Dark Green for contrast on Gold */
+    --primary-glow: 0 0 8px hsla(var(--primary), 0.5); /* Subtle glow effect */
 
-    --secondary: 120 70% 12%; /* Muted Dark Green */
-    --secondary-foreground: 51 100% 80%; /* Lighter Gold */
+    --secondary: 120 70% 10%; /* Muted Dark Green */
+    --secondary-foreground: 51 100% 85%; /* Lighter Gold */
 
-    --muted: 120 60% 15%; /* Muted Dark Green */
+    --muted: 120 60% 12%; /* Muted Dark Green */
     --muted-foreground: 48 50% 85%; /* Muted Light Gold */
 
-    --accent: 51 80% 60%; /* Lighter Gold */
-    --accent-foreground: 120 100% 5%; /* Dark Green */
+    --accent: 51 80% 65%; /* Lighter Gold */
+    --accent-foreground: 120 100% 3%; /* Dark Green */
 
     --destructive: 0 72% 51%; /* Red */
     --destructive-foreground: 0 0% 98%; /* Light Gray */
 
-    --border: 120 60% 15%; /* Muted Dark Green */
-    --input: 120 60% 15%; /* Muted Dark Green */
-    --ring: 51 100% 50%; /* Gold */
+    --border: 120 60% 12%; /* Muted Dark Green */
+    --input: 120 60% 12%; /* Muted Dark Green */
+    --ring: 51 100% 55%; /* Gold */
 
     --radius: 0.5rem;
 
     /* Chart colors (adjust if needed) */
-    --chart-1: 51 100% 50%; /* Gold */
-    --chart-2: 120 60% 35%;
-    --chart-3: 120 80% 20%;
+    --chart-1: 51 100% 55%; /* Gold */
+    --chart-2: 120 60% 30%;
+    --chart-3: 120 80% 15%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
     /* Sidebar specific colors (can inherit or customize) */
-    --sidebar-background: 120 100% 4%; /* Even Darker Green */
+    --sidebar-background: 120 100% 2%; /* Even Darker Green */
     --sidebar-foreground: 48 100% 95%; /* Light Gold/Off-white */
-    --sidebar-primary: 51 100% 50%; /* Gold */
-    --sidebar-primary-foreground: 120 100% 5%;
-    --sidebar-accent: 120 70% 12%; /* Muted Dark Green */
-    --sidebar-accent-foreground: 51 100% 80%; /* Lighter Gold */
-    --sidebar-border: 120 60% 15%; /* Muted Dark Green */
-    --sidebar-ring: 51 100% 50%; /* Gold */
+    --sidebar-primary: 51 100% 55%; /* Gold */
+    --sidebar-primary-foreground: 120 100% 3%;
+    --sidebar-accent: 120 70% 10%; /* Muted Dark Green */
+    --sidebar-accent-foreground: 51 100% 85%; /* Lighter Gold */
+    --sidebar-border: 120 60% 12%; /* Muted Dark Green */
+    --sidebar-ring: 51 100% 55%; /* Gold */
   }
 
   /* Keep dark mode consistent or adjust if needed */
   .dark {
      /* Using the same theme for dark mode for consistency */
-    --background: 120 100% 5%;
+    --background: 120 100% 3%;
     --foreground: 48 100% 95%;
-    --card: 120 85% 8%;
+    --card: 120 85% 5%;
     --card-foreground: 48 100% 95%;
-    --popover: 120 100% 4%;
+    --popover: 120 100% 2%;
     --popover-foreground: 48 100% 95%;
-    --primary: 51 100% 50%;
-    --primary-foreground: 120 100% 5%;
-    --secondary: 120 70% 12%;
-    --secondary-foreground: 51 100% 80%;
-    --muted: 120 60% 15%;
+    --primary: 51 100% 55%;
+    --primary-foreground: 120 100% 3%;
+    --primary-glow: 0 0 8px hsla(var(--primary), 0.5);
+    --secondary: 120 70% 10%;
+    --secondary-foreground: 51 100% 85%;
+    --muted: 120 60% 12%;
     --muted-foreground: 48 50% 85%;
-    --accent: 51 80% 60%;
-    --accent-foreground: 120 100% 5%;
+    --accent: 51 80% 65%;
+    --accent-foreground: 120 100% 3%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
-    --border: 120 60% 15%;
-    --input: 120 60% 15%;
-    --ring: 51 100% 50%;
-    --chart-1: 51 100% 50%;
-    --chart-2: 120 60% 35%;
-    --chart-3: 120 80% 20%;
+    --border: 120 60% 12%;
+    --input: 120 60% 12%;
+    --ring: 51 100% 55%;
+    --chart-1: 51 100% 55%;
+    --chart-2: 120 60% 30%;
+    --chart-3: 120 80% 15%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --sidebar-background: 120 100% 4%;
+    --sidebar-background: 120 100% 2%;
     --sidebar-foreground: 48 100% 95%;
-    --sidebar-primary: 51 100% 50%;
-    --sidebar-primary-foreground: 120 100% 5%;
-    --sidebar-accent: 120 70% 12%;
-    --sidebar-accent-foreground: 51 100% 80%;
-    --sidebar-border: 120 60% 15%;
-    --sidebar-ring: 51 100% 50%;
+    --sidebar-primary: 51 100% 55%;
+    --sidebar-primary-foreground: 120 100% 3%;
+    --sidebar-accent: 120 70% 10%;
+    --sidebar-accent-foreground: 51 100% 85%;
+    --sidebar-border: 120 60% 12%;
+    --sidebar-ring: 51 100% 55%;
   }
 }
 
@@ -107,6 +109,14 @@
   h1, h2, h3, h4, h5, h6 {
      /* Apply default Tailwind font-heading (Impact) */
     @apply font-heading;
+  }
+  /* Apply subtle glow to primary text elements */
+  .text-primary {
+    text-shadow: var(--primary-glow);
+  }
+  /* Apply subtle glow to primary background elements */
+  .bg-primary {
+     box-shadow: var(--primary-glow);
   }
 }
 
@@ -132,6 +142,7 @@
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--card)); /* Added background for potential image load issues */
 }
 
 .card-item img {
@@ -150,11 +161,15 @@
   border-radius: 50%;
   color: hsl(var(--primary));
   z-index: 10; /* Ensure icon is above image */
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
+  border: none; /* Ensure button styles don't interfere */
+  cursor: pointer;
+  box-shadow: var(--primary-glow); /* Apply glow */
 }
 
 .card-link-icon:hover {
    background-color: hsla(var(--background), 0.9);
+   color: hsl(var(--accent));
 }
 
 
@@ -255,4 +270,58 @@
   transform: rotateY(-90deg) scale(0.8);
   opacity: 0;
   z-index: 0;
+}
+
+/* Standalone Viewer Styles */
+#deck-viewer-standalone {
+  perspective: 1000px;
+  position: relative;
+  width: 300px; /* Adjust as needed */
+  height: 400px; /* Adjust as needed */
+  margin: 2rem auto; /* Center on the page */
+}
+
+#deck-viewer-standalone .card-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem; /* Use a fixed value or define a CSS variable */
+  overflow: hidden;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border: 1px solid #3a5f3a; /* Example border, adjust as needed */
+  background-color: #0d1f0d; /* Example dark background */
+}
+
+#deck-viewer-standalone .card-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#deck-viewer-standalone .card-link-icon {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.5rem;
+  background-color: rgba(13, 31, 13, 0.7); /* Example background */
+  border-radius: 50%;
+  color: #ffd700; /* Example gold */
+  z-index: 10;
+  transition: background-color 0.3s;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 8px hsla(51, 100%, 55%, 0.5); /* Example glow */
+}
+
+#deck-viewer-standalone .card-link-icon svg {
+  display: block; /* Prevent extra space */
+  width: 1.25rem; /* 20px */
+  height: 1.25rem; /* 20px */
 }

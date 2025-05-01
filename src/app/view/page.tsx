@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation'; // Correct hook for App Router search params
+// Removed useSearchParams import as it's not needed for hash fragments
 import { Link as LinkIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast'; // Assuming use-toast handles client-side toasts
 
 interface DeckItem {
   id: string;
@@ -32,7 +32,7 @@ export default function ViewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // No need for useSearchParams, we will read from hash fragment
+  // Read data from hash fragment on client-side mount
   useEffect(() => {
     const hash = window.location.hash.substring(1); // Get data after #
     if (hash) {
@@ -42,7 +42,6 @@ export default function ViewPage() {
 
         // Basic validation
         if (parsedData && Array.isArray(parsedData.items) && parsedData.style) {
-             // Further validation on items if needed
              const validItems = parsedData.items.filter(item => item.id && item.imageUrl);
              if (validItems.length !== parsedData.items.length) {
                  console.warn("Some invalid items were filtered out from the deck data.");
@@ -68,7 +67,7 @@ export default function ViewPage() {
 
   const handleCardTap = (e: React.MouseEvent<HTMLDivElement>) => {
      if ((e.target as HTMLElement).closest('.card-link-icon')) {
-      return;
+      return; // Prevent transition if clicking the link icon
     }
     if (deckData && deckData.items.length > 0) {
       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckData.items.length);
@@ -80,10 +79,10 @@ export default function ViewPage() {
     if (link) {
       window.open(link, "_blank", "noopener,noreferrer");
     } else {
-       toast({
+       toast({ // Use client-side toast
         title: "No Link Assigned",
         description: "This card does not have an assigned URL.",
-       })
+       });
     }
   };
 
@@ -95,33 +94,39 @@ export default function ViewPage() {
     if (normalizedIndex === 0) return "current";
     if (normalizedIndex === 1) return "next";
     if (normalizedIndex === totalCards - 1) return "previous";
-    return "hidden-card"; // Or some other class to hide non-adjacent cards
+    // Return a specific class for hidden cards for explicit styling
+    return "hidden-card";
   };
 
 
   if (isLoading) {
+    // Use theme foreground color
     return <div className="flex items-center justify-center h-screen text-foreground">Loading Deck...</div>;
   }
 
   if (error) {
+    // Use theme destructive color (implicitly handled by text-destructive in globals.css)
     return <div className="flex items-center justify-center h-screen text-destructive p-4 text-center">{error}</div>;
   }
 
   if (!deckData || deckData.items.length === 0) {
+     // Use theme muted foreground color
      return <div className="flex items-center justify-center h-screen text-muted-foreground">No deck to display.</div>;
   }
 
+  // The main layout likely provides the background. This centers the stack.
   return (
-     // Apply background to the body or a full-screen container in layout.tsx if needed
-     // This container centers the stack itself
      <div className="flex items-center justify-center w-full h-full p-4">
+        {/* Apply transition style class to the container */}
         <div className={cn("card-stack-container", deckData.style)}>
         {deckData.items.map((item, index) => (
             <div
                 key={item.id}
+                // Apply dynamic classes for current, next, previous, hidden
                 className={cn("card-item", getCardClassName(index))}
                 onClick={handleCardTap}
-                style={{ zIndex: deckData.items.length - Math.abs(currentCardIndex - index) }}
+                // Let CSS handle z-index based on class for smoother transitions
+                // style={{ zIndex: deckData.items.length - Math.abs(currentCardIndex - index) }}
                 data-ai-hint="shared card background"
             >
             <Image
@@ -130,6 +135,7 @@ export default function ViewPage() {
                 fill
                 style={{ objectFit: 'cover' }}
                 priority={index === currentCardIndex}
+                unoptimized // Important for Base64/Data URIs
             />
              {item.link && (
                  <button
@@ -137,6 +143,7 @@ export default function ViewPage() {
                      onClick={(e) => handleLinkIconClick(e, item.link)}
                      aria-label="Open link in new tab"
                   >
+                    {/* Use Lucide Icon */}
                     <LinkIcon className="h-5 w-5" />
                  </button>
                 )}
