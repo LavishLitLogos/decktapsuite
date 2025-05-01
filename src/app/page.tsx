@@ -186,11 +186,7 @@ export default function Home() {
       }
   };
 
-  const handleCardTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Prevent transition if clicking the link icon area (simple check)
-     if ((e.target as HTMLElement).closest('.card-link-icon')) {
-      return;
-    }
+  const handleCardTap = () => {
     if (deckItems.length > 0) {
  console.log("handleCardTap called, currentCardIndex:", currentCardIndex);
       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckItems.length);
@@ -660,7 +656,7 @@ export default function Home() {
       {/* Right Column: Card Preview */}
       <div className="w-full lg:w-2/3 flex items-center justify-center p-4 lg:p-16">
          {deckItems.length > 0 ? (
-             <div className={cn("card-stack-container", transitionStyle)}>
+             <div className={cn("card-stack-container", transitionStyle)} onClick={handleCardTap}>
                 {deckItems.map((item, index) => (
                 <div
                     key={item.id}
@@ -688,10 +684,10 @@ export default function Home() {
                     )}
                 </div>
                 ))}
-            </div>
+             </div>
             ) : (
              <div className="w-[300px] h-[400px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                <Button className="mb-4 ripple empty-state-text" onClick={() => handleCardTap({} as React.MouseEvent<HTMLDivElement>)}>Tap Your Deck</Button>
+                <Button className="mb-4 ripple empty-state-text" onClick={() => handleCardTap(null)}>Tap Your Deck</Button>
                 <p className="text-sm empty-state-text mb-4">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
                 {deckItems.length >= MIN_IMAGES && (
                   <Button variant="outline" className="ripple empty-state-text" onClick={handleDownload}>
