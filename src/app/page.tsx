@@ -118,7 +118,6 @@ export default function Home() {
               setDeckItems(prev => [...prev, ...newItems]);
               // Only generate link if min images are met after adding new ones
               if (deckItems.length + newItems.length >= MIN_IMAGES) {
-               generateShareables([...deckItems, ...newItems], transitionStyle);
               } else {
                  setShareLink(null);
                  setEmbedCode(null);
