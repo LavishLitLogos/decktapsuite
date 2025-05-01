@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, type ChangeEvent, type DragEvent } from "react";
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { UploadCloud, Link as LinkIcon, Copy, Share2, X, Download } from "lucide-react"; // Added Download icon
+import { UploadCloud, Link as LinkIcon, Copy, Share2, X, Download, Crown } from "lucide-react"; // Added Download icon and Crown icon
 import { cn } from "@/lib/utils";
 
 interface DeckItem {
@@ -28,24 +29,45 @@ type TransitionStyle =
 const MAX_IMAGES = 5;
 const MIN_IMAGES = 3;
 
+const PREMIUM_TRANSITIONS: TransitionStyle[] = [
+  "transition-flip-behind",
+  "transition-slide-fade",
+  "transition-lift-drop",
+  "transition-flip-dissolve",
+];
+
+// For demonstration purposes, replace with actual user authentication and role checking
+const OWNER_EMAILS = [
+  'deckcadence52@gmail.com',
+  'r.bouknight88@gmail.com',
+  'homerunroyce@gmail.com'
+];
+
+
 export default function Home() {
   const [deckItems, setDeckItems] = useState<DeckItem[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [transitionStyle, setTransitionStyle] = useState<TransitionStyle>("transition-flip-down");
   const [isDragging, setIsDragging] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
+
+  // Dummy user state - In a real app, this would come from auth context/hook
+  // For testing owner view, change the email here or implement a way to simulate login
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('deckcadence52@gmail.com'); // Replace with actual user email
+
+
+
+  const isOwner = OWNER_EMAILS.includes(currentUserEmail);
+
   const [embedCode, setEmbedCode] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
       processFiles(Array.from(files));
     }
-     // Reset file input to allow uploading the same file again
-     if(fileInputRef.current) {
-        fileInputRef.current.value = '';
-     }
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -95,7 +117,7 @@ export default function Home() {
             setDeckItems(prev => [...prev, ...newItems]);
             // Only generate link if min images are met after adding new ones
             if (deckItems.length + newItems.length >= MIN_IMAGES) {
-               generateShareables([...deckItems, ...newItems], transitionStyle);
+             generateShareables([...deckItems, ...newItems], transitionStyle);
             } else {
                setShareLink(null);
                setEmbedCode(null);
@@ -119,7 +141,7 @@ export default function Home() {
     );
     setDeckItems(updatedItems);
      if (updatedItems.length >= MIN_IMAGES) {
-      generateShareables(updatedItems, transitionStyle);
+ generateShareables(updatedItems, transitionStyle);
     }
   };
 
@@ -137,7 +159,7 @@ export default function Home() {
       } else {
         // Adjust index if the removed card was the last one and index is now out of bounds
         setCurrentCardIndex(prevIndex => Math.min(prevIndex, newItems.length - 1));
-        generateShareables(newItems, transitionStyle);
+ generateShareables(newItems, transitionStyle);
       }
   };
 
@@ -163,25 +185,78 @@ export default function Home() {
     }
   };
 
-   const generateShareables = (items: DeckItem[], style: TransitionStyle) => {
-    if (items.length < MIN_IMAGES) return; // Don't generate if not enough images
+   const generateShareables = useCallback((items: DeckItem[], style: TransitionStyle) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
-    const data = { items, style };
-    const encodedData = btoa(JSON.stringify(data)); // Base64 encode
-    const shareUrl = `${window.location.origin}/view#${encodedData}`;
-    const embedHtml = `<iframe src="${shareUrl}" width="320" height="420" frameborder="0" allowfullscreen></iframe>`; // Adjust dimensions
+    timeoutRef.current = setTimeout(() => {
+      if (items.length < MIN_IMAGES) return; // Don't generate if not enough images
 
-    setShareLink(shareUrl);
-    setEmbedCode(embedHtml);
-  };
+      const data = { items, style };
+      const encodedData = btoa(JSON.stringify(data)); // Base64 encode
+      const shareUrl = `${window.location.origin}/view#${encodedData}`;
+      const embedHtml = `<iframe src="${shareUrl}" width="320" height="420" frameborder="0" allowfullscreen></iframe>`; // Adjust dimensions
+      setShareLink(shareUrl);
+      setEmbedCode(embedHtml);
+    }, 300); // Adjust the delay (in milliseconds) as needed
+  }, []);
 
-   const handleTransitionChange = (value: string) => {
-      const newStyle = value as TransitionStyle;
-      setTransitionStyle(newStyle);
-       if (deckItems.length >= MIN_IMAGES) {
-         generateShareables(deckItems, newStyle);
-       }
-    };
+  // Define handleUpgrade before handleTransitionChange
+  const handleUpgrade = useCallback(async () => { // Wrap in useCallback
+    // In a real application, you would likely create a checkout session
+    // on your backend and redirect the user to the Stripe hosted page.
+    try {
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          successUrl: `${window.location.origin}/?success=true`, // Redirect back here on success
+          origin: window.location.origin, // Send origin for cancel URL construction
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        window.location.href = data.url; // Redirect to Stripe Checkout page
+      } else {
+        toast({
+          title: "Upgrade Failed",
+          description: data.error || "Could not create checkout session.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({ title: "Upgrade Failed", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    }
+  }, []); // Empty dependency array as it doesn't depend on component state directly
+
+   const handleTransitionChange = useCallback((value: string) => { // Changed parameter type to string
+    if (!isOwner && PREMIUM_TRANSITIONS.includes(value as TransitionStyle)) {
+        toast({
+            title: "Premium Feature",
+            description: "Upgrade to unlock this animation style.",
+            variant: "destructive", // Or a custom variant
+            action: <Button onClick={handleUpgrade}>Upgrade Now</Button>, // handleUpgrade is accessible via closure
+        });
+        return; // Prevent changing to a premium style if not owner
+    }
+
+    // Debounce the state update and shareable generation
+    if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+        const newStyle = value as TransitionStyle;
+        setTransitionStyle(newStyle);
+        if (deckItems.length >= MIN_IMAGES) {
+            generateShareables(deckItems, newStyle);
+        }
+    }, 300); // Adjust the delay (in milliseconds) as needed
+  }, [deckItems, generateShareables, isOwner]); // Removed handleUpgrade from dependency array
 
 
   const copyToClipboard = (text: string | null, type: string) => {
@@ -199,6 +274,7 @@ export default function Home() {
       });
     });
   };
+
 
   const getCardClassName = (index: number): string => {
     const totalCards = deckItems.length;
@@ -244,9 +320,7 @@ export default function Home() {
       .card-link-icon svg { width: 1.25rem; height: 1.25rem; }
       .hidden-card { opacity: 0 !important; pointer-events: none; transform: scale(0.8); } /* Ensure non-visible cards are truly hidden */
       /* Add transition styles based on 'style' parameter */
-      .${style} .card-item.next { /* Simplified example - add all transition variations */ }
       .${style} .card-item.current { transform: rotateX(0deg) translateZ(0); opacity: 1; z-index: 2; }
-      .${style} .card-item.previous { /* Simplified example */ }
       /* Include all transition variations from globals.css here, prefixing with .${style} */
       .transition-flip-down .card-item.next { transform: rotateX(-90deg) translateZ(-20px) translateY(-20px); opacity: 0; z-index: 1; }
       .transition-flip-down .card-item.previous { transform: rotateX(90deg) translateZ(-20px) translateY(20px); opacity: 0; z-index: 0; }
@@ -464,15 +538,29 @@ export default function Home() {
                 <SelectValue placeholder="Select transition" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="transition-flip-down">Flip Down</SelectItem>
-                <SelectItem value="transition-flip-behind">Flip Behind</SelectItem>
-                <SelectItem value="transition-slide-fade">Slide Fade</SelectItem>
-                <SelectItem value="transition-lift-drop">Lift Up / Drop Down</SelectItem>
-                <SelectItem value="transition-flip-dissolve">Flip + Dissolve</SelectItem>
+                 <SelectItem value="transition-flip-down">Flip Down</SelectItem>
+                 <SelectItem value="transition-flip-behind" disabled={!isOwner}>
+                     Flip Behind { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
+                 </SelectItem>
+                 <SelectItem value="transition-slide-fade" disabled={!isOwner}>
+                     Slide Fade { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
+                 </SelectItem>
+                 <SelectItem value="transition-lift-drop" disabled={!isOwner}>
+                     Lift Up / Drop Down { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
+                 </SelectItem>
+                 <SelectItem value="transition-flip-dissolve" disabled={!isOwner}>
+                     Flip + Dissolve { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
+                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
+        {/* Upgrade Button (Visible if not owner) */}
+        {!isOwner && (
+          <CardFooter className="flex justify-center pt-0">
+            <Button onClick={handleUpgrade} className="w-full flex items-center gap-2"><Crown className="w-5 h-5"/> Unlock Premium Animations</Button>
+          </CardFooter>
+        )}
          <CardFooter className="flex-col items-start gap-4">
              {/* Share Section */}
              {deckItems.length >= MIN_IMAGES && (
