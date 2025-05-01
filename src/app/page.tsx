@@ -148,7 +148,7 @@ export default function Home() {
   const handleRemoveItem = (idToRemove: string) => {
       const newItems = deckItems.filter(item => item.id !== idToRemove);
       setDeckItems(newItems);
-      if (newItems.length < MIN_IMAGES) {
+ if (newItems.length < MIN_IMAGES && deckItems.length >= MIN_IMAGES) {
         setShareLink(null);
         setEmbedCode(null);
         setCurrentCardIndex(0); // Reset index if below minimum
@@ -318,7 +318,7 @@ export default function Home() {
       .card-link-icon { position: absolute; bottom: 1rem; right: 1rem; padding: 0.5rem; background-color: rgba(8, 20, 8, 0.7); border-radius: 50%; color: #ffdb58; z-index: 10; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; border: none; cursor: pointer; box-shadow: 0 0 8px hsla(51, 100%, 55%, 0.5); display: flex; align-items: center; justify-content: center; }
       .card-link-icon:hover { background-color: rgba(8, 20, 8, 0.9); color: #ffe791; }
       .card-link-icon svg { width: 1.25rem; height: 1.25rem; }
-      .hidden-card { opacity: 0 !important; pointer-events: none; transform: scale(0.8); } /* Ensure non-visible cards are truly hidden */
+ .hidden-card { opacity: 0 !important; pointer-events: none; } /* Ensure non-visible cards are truly hidden */
       /* Add transition styles based on 'style' parameter */
       .${style} .card-item.current { transform: rotateX(0deg) translateZ(0); opacity: 1; z-index: 2; }
       /* Include all transition variations from globals.css here, prefixing with .${style} */
@@ -480,7 +480,7 @@ export default function Home() {
         <CardContent className="space-y-6">
           {/* Image Upload */}
           <div
-            className={cn(
+            className={cn("upload-area",
               "border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors",
               isDragging && "border-primary bg-muted/50"
             )}
@@ -512,7 +512,7 @@ export default function Home() {
               <h3 className="text-lg font-medium font-heading">Your Cards ({deckItems.length}/{MAX_IMAGES})</h3>
               {deckItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 p-2 border rounded-md bg-card/80">
-                  <Image src={item.imageUrl} alt="Uploaded thumbnail" width={40} height={40} className="rounded object-cover" />
+                  <Image src={item.imageUrl} alt="Uploaded thumbnail" width={40} height={40} className="rounded object-cover fade-in-item" />
                   <Input
                     type="url"
                     placeholder="https://"
@@ -520,7 +520,7 @@ export default function Home() {
                     onChange={(e) => handleLinkChange(item.id, e.target.value)}
                     className="flex-grow text-sm h-8"
                   />
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemoveItem(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 ripple" onClick={() => handleRemoveItem(item.id)}>
                       <X className="h-4 w-4"/>
                        <span className="sr-only">Remove Item</span>
                   </Button>
@@ -559,7 +559,7 @@ export default function Home() {
         {!isOwner && (
           <CardFooter className="flex justify-center pt-0">
             <Button onClick={handleUpgrade} className="w-full flex items-center gap-2"><Crown className="w-5 h-5"/> Unlock Premium Animations</Button>
-          </CardFooter>
+ </CardFooter>
         )}
          <CardFooter className="flex-col items-start gap-4">
              {/* Share Section */}
@@ -572,7 +572,7 @@ export default function Home() {
                             <Label htmlFor="share-link">Share Link</Label>
                             <div className="flex gap-2">
                                 <Input id="share-link" value={shareLink} readOnly className="bg-muted" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')}>
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')} className="ripple">
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Link</span>
                                 </Button>
@@ -584,7 +584,7 @@ export default function Home() {
                             <Label htmlFor="embed-code">Embed Code</Label>
                             <div className="flex gap-2 items-start">
                                 <Textarea id="embed-code" value={embedCode} readOnly rows={3} className="bg-muted text-xs resize-none" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px">
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px ripple">
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Embed Code</span>
                                 </Button>
@@ -592,7 +592,7 @@ export default function Home() {
                         </div>
                     )}
                      {/* Download Button */}
-                    <Button onClick={handleDownload} variant="outline" className="w-full">
+                    <Button onClick={handleDownload} variant="outline" className="w-full ripple">
                         <Download className="mr-2 h-4 w-4" />
                         Download Standalone HTML
                     </Button>
@@ -612,7 +612,6 @@ export default function Home() {
                 <div
                     key={item.id}
                     className={cn("card-item", getCardClassName(index))}
-                    onClick={handleCardTap}
                     // style={{ zIndex: deckItems.length - Math.abs(currentCardIndex - index)}} // Basic z-index logic
                     // Let CSS handle z-index based on class for smoother transitions
                     data-ai-hint="card background"
@@ -628,7 +627,7 @@ export default function Home() {
                     {item.link && (
                         <button
                             className="card-link-icon"
-                            onClick={(e) => handleLinkIconClick(e, item.link)}
+ onClick={(e) => handleLinkIconClick(e, item.link)}
                             aria-label="Open link in new tab"
                         >
                             <LinkIcon className="h-5 w-5" />
@@ -639,8 +638,8 @@ export default function Home() {
             </div>
             ) : (
              <div className="w-[300px] h-[400px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                <p className="text-lg font-medium">Your Deck Appears Here</p>
-                <p className="text-sm">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
+                <p className="text-lg font-medium empty-state-text">Your Deck Appears Here</p>
+                <p className="text-sm empty-state-text">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
             </div>
             )}
       </div>
