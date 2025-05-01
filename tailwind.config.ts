@@ -11,8 +11,10 @@ export default {
   theme: {
   	extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans], // Use CSS variable for sans (Anton)
-        heading: ["var(--font-heading)", ...fontFamily.sans], // Use CSS variable for heading (Anton)
+        // Prioritize Impact, fallback to system sans-serif fonts
+        sans: ["Impact", "Arial Black", "sans-serif", ...fontFamily.sans],
+        // Use the same stack for headings
+        heading: ["Impact", "Arial Black", "sans-serif", ...fontFamily.sans],
         // Keep mono if needed, otherwise remove
         // mono: ["var(--font-mono)", ...fontFamily.mono],
       },

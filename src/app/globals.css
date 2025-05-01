@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  /* Use font-sans (Anton) as default */
-}
+/* Removed body font-family rule */
 
 @layer base {
   :root {
@@ -100,13 +98,15 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans; /* Use Anton (via --font-sans) */
+    /* Apply default Tailwind font-sans (Impact) */
+    @apply bg-background text-foreground font-sans;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading; /* Apply Anton (via --font-heading) */
+     /* Apply default Tailwind font-heading (Impact) */
+    @apply font-heading;
   }
 }
 
