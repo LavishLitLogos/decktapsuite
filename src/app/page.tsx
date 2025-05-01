@@ -638,8 +638,14 @@ export default function Home() {
             </div>
             ) : (
              <div className="w-[300px] h-[400px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                <p className="text-lg font-medium empty-state-text">Your Deck Appears Here</p>
-                <p className="text-sm empty-state-text">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
+                <Button className="mb-4 ripple empty-state-text" onClick={() => handleCardTap({} as React.MouseEvent<HTMLDivElement>)}>Tap Your Deck</Button>
+                <p className="text-sm empty-state-text mb-4">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
+                {deckItems.length >= MIN_IMAGES && (
+                  <Button variant="outline" className="ripple empty-state-text" onClick={handleDownload}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                  </Button>
+                )}
             </div>
             )}
       </div>
