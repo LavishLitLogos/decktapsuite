@@ -192,6 +192,7 @@ export default function Home() {
       return;
     }
     if (deckItems.length > 0) {
+ console.log("handleCardTap called, currentCardIndex:", currentCardIndex);
       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckItems.length);
     }
   };
@@ -328,6 +329,7 @@ export default function Home() {
 
 
   const getCardClassName = (index: number): string => {
+ console.log("getCardClassName called for index:", index);
     const totalCards = deckItems.length;
     if (totalCards === 0) return '';
 
