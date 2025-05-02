@@ -861,7 +861,7 @@ export default function Home() {
                 </div>
                 ))}
              </div>
-            ) : (
+            ) : ( 
              <div className="w-[300px] h-[400px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-8">
                 <Button className="mb-4" onClick={() => fileInputRef.current?.click()}>Upload Images</Button>
                 <p className="text-sm empty-state-text mb-4">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
