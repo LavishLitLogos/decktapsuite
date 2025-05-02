@@ -1,5 +1,7 @@
 "use client";
 
+import { Buffer } from 'buffer';
+
 import React, { useState, useRef, useCallback, type ChangeEvent, type DragEvent } from "react";
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -384,8 +386,8 @@ export default function Home() {
       try {
         const data = { items, style };
         let encodedData;
-        try {
-            encodedData = btoa(JSON.stringify(data)); // Base64 encode
+        try { // Use Buffer for base64 encoding to ensure compatibility in all environments
+            encodedData = Buffer.from(JSON.stringify(data)).toString('base64');
         } catch (error: any) {
              toast({
               title: "Error Encoding Data",
