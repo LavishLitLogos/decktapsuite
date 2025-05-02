@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { UploadCloud, Link as LinkIcon, Copy, Share2, X, Download, Crown } from "lucide-react"; // Added Download icon and Crown icon
+import { UploadCloud, Link as LinkIcon, Copy, X, Download, Crown } from "lucide-react"; // Added Download icon and Crown icon
 import { cn } from "@/lib/utils";
 
 interface DeckItem {
@@ -17,6 +17,7 @@ interface DeckItem {
   imageUrl: string;
   link: string;
 }
+
 
 type TransitionStyle =
   | "transition-flip-down"
@@ -48,8 +49,10 @@ export default function Home() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [transitionStyle, setTransitionStyle] = useState<TransitionStyle>("transition-flip-down");
   const [isDragging, setIsDragging] = useState(false);
+  const [isDeckCreated, setIsDeckCreated] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
 
+  const previousItemsRef = useRef<DeckItem[]>([]);
 
   // Dummy user state - In a real app, this would come from auth context/hook
   // For testing owner view, change the email here or implement a way to simulate login
@@ -183,59 +186,126 @@ export default function Home() {
 
     const newItems: DeckItem[] = [];
     files.forEach(file => {
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            newItems.push({
-              id: crypto.randomUUID(),
-              imageUrl: e.target?.result as string,
-              link: "", // Initialize link as empty
-            });
-            // Check if all files are processed
-            if (newItems.length === files.filter(f => f.type.startsWith("image/")).length) {
-              setDeckItems(prev => [...prev, ...newItems]);
-              // Only generate link if min images are met after adding new ones
-              if (deckItems.length + newItems.length >= MIN_IMAGES) {
-                 generateShareables([...deckItems, ...newItems], transitionStyle);
-              } else {
-                 setShareLink(null);
-                 setEmbedCode(null);
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid File Type",
+          description: `${file.name} is not a valid image file. Please upload images only.`,
+          variant: "destructive",
+        });
+        return; // Skip this file
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              throw new Error("Could not get canvas context.");
+            }
+
+            const maxWidth = 500;
+            const maxHeight = 500;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxWidth) {
+                height = height * (maxWidth / width);
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = width * (maxHeight / height);
+                height = maxHeight;
               }
             }
-          } catch (error: any) {
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Use canvas to get a Blob, then create an Object URL
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const imageUrl = URL.createObjectURL(blob);
+                newItems.push({
+                  id: crypto.randomUUID(),
+                  imageUrl: imageUrl, // Use Object URL
+                  link: "", // Initialize link as empty
+                });
+                // Check if all image files are processed
+                if (newItems.length === files.filter(f => f.type.startsWith("image/")).length) {
+                  setDeckItems(prev => {
+                    const updatedItems = [...prev, ...newItems];
+                    // Only generate link if min images are met after adding new ones
+                    if (updatedItems.length >= MIN_IMAGES) {
+                      generateShareables(updatedItems, transitionStyle);
+                    } else {
+                      setShareLink(null);
+                      setEmbedCode(null);
+                    }
+                    return updatedItems;
+                  });
+                }
+              } else {
+                toast({
+                  title: "Error Resizing Image",
+                  description: `Could not create blob from canvas for ${file.name}.`,
+                  variant: "destructive",
+                });
+              }
+            }, file.type); // Preserve original image type
+          };
+          img.onerror = () => {
              toast({
-              title: "Error Processing Image",
-              description: `Could not process image ${file.name}: ${error.message}`,
+              title: "Error Loading Image",
+              description: `Could not load image file ${file.name} for resizing.`,
               variant: "destructive",
              });
-          }
-        };
-        reader.onerror = (error) => {
-           toast({
-            title: "Error Reading File",
-            description: `Could not read file ${file.name}.`,
+          };
+          img.src = e.target?.result as string; // Load image from Data URL initially for resizing
+        } catch (error: any) {
+          toast({
+            title: "Error Processing Image",
+            description: `Could not process image ${file.name}: ${error.message}`,
             variant: "destructive",
           });
         }
-        try {
-          reader.readAsDataURL(file);
-        } catch (error: any) {
-           toast({
-            title: "Error Reading File",
-            description: `Could not read file ${file.name}: ${error.message}`,
-            variant: "destructive",
-           });
-        }
-      } else {
-         toast({
-            title: "Invalid File Type",
-            description: `${file.name} is not a valid image file. Please upload images only.`,
-            variant: "destructive",
-         })
+      };
+      reader.onerror = (error) => {
+        toast({
+          title: "Error Reading File",
+          description: `Could not read file ${file.name}.`,
+          variant: "destructive",
+        });
+      };
+      // Read file as Data URL to use with Image object for resizing
+      try {
+        reader.readAsDataURL(file);
+      } catch (error: any) {
+        toast({
+          title: "Error Reading File",
+          description: `Could not read file ${file.name}: ${error.message}`,
+          variant: "destructive",
+        });
       }
     });
   };
+
+  // Cleanup object URLs when deckItems change or component unmounts
+  React.useEffect(() => {
+    return () => {
+      deckItems.forEach(item => {
+        // Check if the imageUrl is an Object URL before revoking
+        if (item.imageUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(item.imageUrl);
+        };
+      });
+    };
+  }, [deckItems]); // Depend on deckItems
 
    const handleLinkChange = (id: string, link: string) => {
     const updatedItems = deckItems.map(item =>
@@ -250,6 +320,7 @@ export default function Home() {
   const handleRemoveItem = (idToRemove: string) => {
       const newItems = deckItems.filter(item => item.id !== idToRemove);
       setDeckItems(newItems);
+      setIsDeckCreated(false); // Reset deck creation state
      if (newItems.length < MIN_IMAGES && deckItems.length >= MIN_IMAGES) {
         setShareLink(null);
         setEmbedCode(null);
@@ -301,6 +372,12 @@ export default function Home() {
       clearTimeout(timeoutRef.current);
     }
 
+    // Check if items array has changed compared to the previous call
+    // Simple length check and comparing stringified versions (less efficient but reliable)
+    // A more performant approach might involve deep comparison if necessary
+    const itemsChanged = JSON.stringify(items) !== JSON.stringify(previousItemsRef.current);
+
+    previousItemsRef.current = items; // Update the ref with the current item
     timeoutRef.current = setTimeout(() => {
       if (items.length < MIN_IMAGES) return; // Don't generate if not enough images
 
@@ -583,12 +660,9 @@ export default function Home() {
        return;
      }
 
-     let htmlContent = '';
+ let htmlContent: string;
      try {
          htmlContent = generateStandaloneHtml(deckItems, transitionStyle);
-         if (!htmlContent) {
-             throw new Error("Generated HTML content is empty.");
-         }
      } catch (error: any) {
           toast({
              title: "Error Generating HTML",
@@ -596,32 +670,15 @@ export default function Home() {
              variant: "destructive",
            });
            return; // Stop if HTML generation failed
-     }
-
-
-     let blob: Blob;
-      try {
-        blob = new Blob([htmlContent], { type: 'text/html' });
-      } catch (error: any) {
-         toast({
-           title: "Error Creating File",
-           description: `Could not create the file blob: ${error.message}`,
-           variant: "destructive",
-         });
-         return;
-       }
-
-
-     let url: string | null = null;
-     let link: HTMLAnchorElement | null = null;
+      }
 
      try {
-        url = URL.createObjectURL(blob);
-        link = document.createElement('a');
-        link.href = url;
-        link.download = 'decktap-deck.html';
-        document.body.appendChild(link);
-        link.click();
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+ link.href = url;
+ link.download = 'decktap-deck.html';
+ link.click();
 
         toast({
             title: "Download Started",
@@ -717,19 +774,29 @@ export default function Home() {
               </SelectTrigger>
               <SelectContent>
                  <SelectItem value="transition-flip-down">Flip Down</SelectItem>
-                 <SelectItem value="transition-flip-behind" disabled={!isOwner}>
-                     Flip Behind { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
-                 </SelectItem>
-                 <SelectItem value="transition-slide-fade" disabled={!isOwner}>
-                     Slide Fade { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
-                 </SelectItem>
-                 <SelectItem value="transition-lift-drop" disabled={!isOwner}>
-                     Lift Up / Drop Down { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
-                 </SelectItem>
-                 <SelectItem value="transition-flip-dissolve" disabled={!isOwner}>
-                     Flip + Dissolve { !isOwner && <Crown className="inline-block w-3 h-3 ml-1 text-primary" />}
-                 </SelectItem>
+                 {isOwner ? (
+                    <>
+                        <SelectItem value="transition-flip-behind">
+                            Flip Behind
+                        </SelectItem>
+                        <SelectItem value="transition-slide-fade">
+                            Slide Fade
+                        </SelectItem>
+                        <SelectItem value="transition-lift-drop">
+                            Lift Up / Drop Down
+                        </SelectItem>
+                        <SelectItem value="transition-flip-dissolve">
+                            Flip + Dissolve
+                        </SelectItem>
+                    </>
+                 ) : (
+                    <>
+                        {/* Optionally show disabled premium options with Crown */}
+                        {/* Removed disabled premium options to not show them */}
+                    </>
+                 )}
               </SelectContent>
+
             </Select>
              {!isOwner && (
               <p className="text-xs text-muted-foreground flex items-center gap-1 pt-1">
@@ -740,46 +807,13 @@ export default function Home() {
         </CardContent>
         {/* Upgrade Button (Visible if not owner) */}
         {!isOwner && (
-          <CardFooter className="flex justify-center pt-0 border-t border-border mt-4">
+          <CardFooter className="flex justify-center pt-0 border-t border-border mt-4 flex-col items-center gap-4"> {/* Added flex-col items-center gap-4 */}
             <Button onClick={handleUpgrade} className="w-full flex items-center gap-2 mt-4"><Crown className="w-5 h-5"/> Unlock Premium Animations</Button>
          </CardFooter>
         )}
          <CardFooter className="flex-col items-start gap-4 pt-4 border-t border-border">
-             {/* Share Section */}
-             {deckItems.length >= MIN_IMAGES && (
-                 <div className="w-full space-y-4">
-                    {/* Apply text-primary class for glow effect */}
-                    <h3 className="text-lg font-medium font-heading flex items-center gap-2 text-primary"><Share2 className="w-5 h-5 text-primary"/> Share Your Deck</h3>
-                    {shareLink && (
-                        <div className="space-y-2">
-                            <Label htmlFor="share-link">Share Link</Label>
-                            <div className="flex gap-2">
-                                <Input id="share-link" value={shareLink} readOnly className="bg-muted flex-grow" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')} aria-label="Copy Share Link">
-                                    <Copy className="h-4 w-4" />
-                                    <span className="sr-only">Copy Link</span>
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                    {embedCode && (
-                        <div className="space-y-2">
-                            <Label htmlFor="embed-code">Embed Code</Label>
-                            <div className="flex gap-2 items-start">
-                                <Textarea id="embed-code" value={embedCode} readOnly rows={3} className="bg-muted text-xs resize-none flex-grow" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px flex-shrink-0" aria-label="Copy Embed Code">
-                                    <Copy className="h-4 w-4" />
-                                    <span className="sr-only">Copy Embed Code</span>
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                     {/* Download Button */}
-                    <Button onClick={handleDownload} variant="outline" className="w-full">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Standalone HTML
-                    </Button>
-                </div>
+             {deckItems.length >= MIN_IMAGES && !isDeckCreated && (
+                <Button onClick={() => setIsDeckCreated(true)} className="w-full">Create Deck</Button>
             )}
            {deckItems.length < MIN_IMAGES && deckItems.length > 0 && (
                  <p className="text-sm text-muted-foreground pt-4">Upload at least {MIN_IMAGES} images to generate share links and download.</p>
@@ -791,8 +825,9 @@ export default function Home() {
       </Card>
 
       {/* Right Column: Card Preview */}
-      <div className="w-full lg:w-2/3 flex items-center justify-center p-4 lg:p-16 min-h-[450px]"> {/* Added min-height */}
-         {deckItems.length > 0 ? (
+      <div className="w-full lg:w-2/3 flex items-center justify-center p-4 lg:p-16">
+         {isDeckCreated && deckItems.length >= MIN_IMAGES ? (\
+            <>
              <div className={cn("card-stack-container", transitionStyle)} onClick={handleCardTap}>
                 {deckItems.map((item, index) => (
                 <div
