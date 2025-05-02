@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useCallback, type ChangeEvent, type DragEvent } from "react";
-import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,6 @@ export default function Home() {
   const [transitionStyle, setTransitionStyle] = useState<TransitionStyle>("transition-flip-down");
   const [isDragging, setIsDragging] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
-  // const [isTransitioning, setIsTransitioning] = useState(false); // Temporarily remove for debugging delay
 
 
   // Dummy user state - In a real app, this would come from auth context/hook
@@ -64,6 +62,85 @@ export default function Home() {
   const [embedCode, setEmbedCode] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+   // Define handleUpgrade before handleTransitionChange
+   const handleUpgrade = useCallback(async () => { // Wrap in useCallback
+    // In a real application, you would likely create a checkout session
+    // on your backend and redirect the user to the Stripe hosted page.
+    try {
+       let origin = '';
+        try {
+           // Ensure window exists (client-side)
+           if (typeof window !== 'undefined') {
+               origin = window.location.origin;
+           } else {
+              toast({ title: "Browser Error", description: "Cannot initiate upgrade without window context.", variant: "destructive" });
+               return;
+           }
+        } catch (error: any) {
+           toast({ title: "Browser Error", description: "Could not determine site origin for upgrade.", variant: "destructive" });
+           return;
+        }
+
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          successUrl: `${origin}/?success=true`, // Redirect back here on success
+          origin: origin, // Send origin for cancel URL construction
+        }),
+
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+         // Ensure window exists before redirecting
+         if (typeof window !== 'undefined') {
+             window.location.href = data.url; // Redirect to Stripe Checkout page
+         } else {
+             console.error("Cannot redirect without window object.");
+             toast({ title: "Upgrade Error", description: "Cannot redirect to checkout page.", variant: "destructive" });
+         }
+
+      } else {
+        toast({
+          title: "Upgrade Failed",
+          description: data.error || "Could not create checkout session.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({ title: "Upgrade Failed", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    }
+  }, []); // Empty dependency array as it doesn't depend on component state directly
+
+    const handleTransitionChange = useCallback((value: string) => { // Changed parameter type to string
+    if (!isOwner && PREMIUM_TRANSITIONS.includes(value as TransitionStyle)) {
+        toast({
+            title: "Premium Feature",
+            description: "Upgrade to unlock this animation style.",
+            variant: "destructive", // Or a custom variant
+            action: <Button onClick={handleUpgrade}>Upgrade Now</Button>, // handleUpgrade is accessible via closure
+        });
+        return; // Prevent changing to a premium style if not owner
+    }
+
+    // Debounce the state update and shareable generation
+    if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+        const newStyle = value as TransitionStyle;
+        setTransitionStyle(newStyle);
+        if (deckItems.length >= MIN_IMAGES) {
+            generateShareables(deckItems, newStyle);
+        }
+    }, 300); // Adjust the delay (in milliseconds) as needed
+  }, [deckItems, isOwner, handleUpgrade]); // Added handleUpgrade to dependency array
+
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -197,13 +274,12 @@ export default function Home() {
        return;
      }
 
-    // Prevent transition if during CSS transition (using a simple check or a state flag)
-    // if (isTransitioning) return; // Re-enable if needed
-
-    if (deckItems.length > 0) {
-      // setIsTransitioning(true); // Re-enable if needed
-      setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckItems.length);
-       // setTimeout(() => setIsTransitioning(false), 700); // Match CSS duration - Re-enable if needed
+    if (deckItems.length > 1) { // Only transition if more than one card
+       // Use requestAnimationFrame to ensure the state update happens
+       // after the current event loop tick, allowing CSS transitions to start smoothly.
+       requestAnimationFrame(() => {
+         setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckItems.length);
+       });
     }
   };
 
@@ -268,86 +344,7 @@ export default function Home() {
            });
        }
     }, 300); // Adjust the delay (in milliseconds) as needed
-  }, []);
-
-  // Define handleUpgrade before handleTransitionChange
-  const handleUpgrade = useCallback(async () => { // Wrap in useCallback
-    // In a real application, you would likely create a checkout session
-    // on your backend and redirect the user to the Stripe hosted page.
-    try {
-       let origin = '';
-        try {
-           // Ensure window exists (client-side)
-           if (typeof window !== 'undefined') {
-               origin = window.location.origin;
-           } else {
-              toast({ title: "Browser Error", description: "Cannot initiate upgrade without window context.", variant: "destructive" });
-               return;
-           }
-        } catch (error: any) {
-           toast({ title: "Browser Error", description: "Could not determine site origin for upgrade.", variant: "destructive" });
-           return;
-        }
-
-      const response = await fetch('/api/stripe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          successUrl: `${origin}/?success=true`, // Redirect back here on success
-          origin: origin, // Send origin for cancel URL construction
-        }),
-
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.url) {
-         // Ensure window exists before redirecting
-         if (typeof window !== 'undefined') {
-             window.location.href = data.url; // Redirect to Stripe Checkout page
-         } else {
-             console.error("Cannot redirect without window object.");
-             toast({ title: "Upgrade Error", description: "Cannot redirect to checkout page.", variant: "destructive" });
-         }
-
-      } else {
-        toast({
-          title: "Upgrade Failed",
-          description: data.error || "Could not create checkout session.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({ title: "Upgrade Failed", description: error.message || "An unexpected error occurred.", variant: "destructive" });
-    }
-  }, []); // Empty dependency array as it doesn't depend on component state directly
-
-
-   const handleTransitionChange = useCallback((value: string) => { // Changed parameter type to string
-    if (!isOwner && PREMIUM_TRANSITIONS.includes(value as TransitionStyle)) {
-        toast({
-            title: "Premium Feature",
-            description: "Upgrade to unlock this animation style.",
-            variant: "destructive", // Or a custom variant
-            action: <Button onClick={handleUpgrade}>Upgrade Now</Button>, // handleUpgrade is accessible via closure
-        });
-        return; // Prevent changing to a premium style if not owner
-    }
-
-    // Debounce the state update and shareable generation
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-        const newStyle = value as TransitionStyle;
-        setTransitionStyle(newStyle);
-        if (deckItems.length >= MIN_IMAGES) {
-            generateShareables(deckItems, newStyle);
-        }
-    }, 300); // Adjust the delay (in milliseconds) as needed
-  }, [deckItems, generateShareables, isOwner, handleUpgrade]); // Added handleUpgrade to dependency array
+  }, []); // Added generateShareables as dependency for handleTransitionChange
 
 
   const copyToClipboard = (text: string | null, type: string) => {
@@ -441,7 +438,7 @@ export default function Home() {
       }
       body { margin: 0; background-color: hsl(var(--background)); display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Impact, Arial Black, sans-serif; }
       .card-stack-container { perspective: 1000px; position: relative; width: 300px; height: 400px; }
-      .card-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: var(--radius); overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid hsl(var(--border)); background-color: hsl(var(--card)); opacity: 0; pointer-events: none; /* Initially hidden */ }
+      .card-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: var(--radius); overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; transition: transform 0.7s ease-out, opacity 0.7s ease-out; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid hsl(var(--border)); background-color: hsl(var(--card)); opacity: 0; pointer-events: none; /* Initially hidden */ }
       .card-item.current, .card-item.next, .card-item.previous { pointer-events: auto; } /* Make relevant cards interactive */
       .card-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
       .card-link-icon { position: absolute; bottom: 1rem; right: 1rem; padding: 0.5rem; background-color: hsla(var(--background), 0.7); border-radius: 50%; color: hsl(var(--primary)); z-index: 10; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; border: none; cursor: pointer; box-shadow: var(--primary-glow); display: flex; align-items: center; justify-content: center; pointer-events: auto !important; /* Ensure link icon is always clickable */ }
@@ -505,7 +502,7 @@ export default function Home() {
               return; // Stop if no cards
           }
 
-          let isTransitioning = false; // Flag to prevent rapid clicks
+          // let isTransitioning = false; // Flag to prevent rapid clicks - CSS handles this now
 
           function getCardClass(index, currentIndex) {
               if (totalCards === 0) return 'hidden-card'; // Handle empty case
@@ -517,63 +514,38 @@ export default function Home() {
           }
 
           function updateCards() {
-              if (!container || isTransitioning) return;
-              isTransitioning = true;
+              // Removed isTransitioning check
+              if (!container) return;
 
               const cardElements = container.querySelectorAll('.card-item');
               cardElements.forEach((card, index) => {
                   if (card instanceof HTMLElement) { // Type guard
                       card.className = 'card-item ' + getCardClass(index, currentCardIndex);
-                      // Optional: Re-apply initial transform for non-current cards if needed by transitions
-                      if (getCardClass(index, currentCardIndex) !== 'current') {
-                          // card.style.transform = 'translateZ(0px)'; // Reset if needed
-                      }
+                       // No need to manage opacity/z-index directly, CSS handles it based on classes
                   }
               });
 
-              // Update opacity and z-index directly based on class for clarity
-              const currentCard = container.querySelector('.card-item.current');
-              if (currentCard instanceof HTMLElement) {
-                  currentCard.style.opacity = '1';
-                  currentCard.style.zIndex = '2';
-              }
-               const nextCard = container.querySelector('.card-item.next');
-               if (nextCard instanceof HTMLElement) {
-                   nextCard.style.opacity = '0'; // Will be faded in by CSS transition if it becomes current
-                   nextCard.style.zIndex = '1';
-               }
-                const prevCard = container.querySelector('.card-item.previous');
-               if (prevCard instanceof HTMLElement) {
-                   prevCard.style.opacity = '0';
-                   prevCard.style.zIndex = '0';
-               }
-               container.querySelectorAll('.card-item.hidden-card').forEach(card => {
-                   if (card instanceof HTMLElement) {
-                       card.style.opacity = '0';
-                       card.style.zIndex = '-1';
-                   }
-               });
-
-
-              setTimeout(() => {
-                  isTransitioning = false;
-              }, 700); // Match CSS transition duration
+              // Removed direct style manipulation for opacity/z-index
+              // Removed setTimeout logic as CSS handles transition timing
           }
 
           container.addEventListener('click', (e) => {
-              if (isTransitioning) return;
+              // Removed isTransitioning check
 
-              const linkButton = (e.target as HTMLElement).closest('.card-link-icon');
+              const linkButton = (e.target).closest('.card-link-icon');
               if (linkButton instanceof HTMLElement) {
                   const link = linkButton.getAttribute('data-link');
                   if (link) {
                       e.stopPropagation();
                       window.open(link, '_blank', 'noopener,noreferrer');
                   }
-              } else if ((e.target as HTMLElement).closest('.card-item.current')) { // Only transition if current card is clicked
+              } else if ((e.target).closest('.card-item.current')) { // Only transition if current card is clicked
                   if (totalCards > 1) { // Only advance if there's more than one card
-                    currentCardIndex = (currentCardIndex + 1) % totalCards;
-                    updateCards();
+                    // Use requestAnimationFrame for smoother transition start
+                    requestAnimationFrame(() => {
+                        currentCardIndex = (currentCardIndex + 1) % totalCards;
+                        updateCards();
+                    });
                   }
               }
           });
@@ -864,5 +836,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

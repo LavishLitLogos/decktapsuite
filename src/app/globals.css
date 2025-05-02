@@ -138,7 +138,8 @@
   overflow: hidden;
   backface-visibility: hidden;
   transform-style: preserve-3d;
-  transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out;
+  /* Faster, potentially less smooth start */
+  transition: transform 0.7s ease-out, opacity 0.7s ease-out;
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   border: 1px solid hsl(var(--border));
@@ -248,7 +249,8 @@
   overflow: hidden;
   backface-visibility: hidden;
   transform-style: preserve-3d;
-  transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out;
+  /* Match main transition timing */
+  transition: transform 0.7s ease-out, opacity 0.7s ease-out;
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   border: 1px solid hsl(var(--border));

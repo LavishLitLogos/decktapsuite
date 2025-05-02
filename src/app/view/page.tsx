@@ -30,7 +30,7 @@ export default function ViewPage() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // const [isTransitioning, setIsTransitioning] = useState(false); // Temporarily remove for debugging delay
+  // const [isTransitioning, setIsTransitioning] = useState(false); // Removed isTransitioning state
 
   // Read data from hash fragment on client-side mount
   useEffect(() => {
@@ -69,13 +69,14 @@ export default function ViewPage() {
      if ((e.target as HTMLElement).closest('.card-link-icon')) {
        return; // Prevent transition if clicking the link icon
      }
-     // if (isTransitioning) return; // Re-enable if needed
+     // Removed isTransitioning check
 
      if (deckData && deckData.items.length > 1) { // Only transition if more than one card
-       // setIsTransitioning(true); // Re-enable if needed
-       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckData.items.length);
-       // Reset flag after transition duration
-       // setTimeout(() => setIsTransitioning(false), 700); // Match CSS duration - Re-enable if needed
+       // Use requestAnimationFrame for smoother state update and transition start
+       requestAnimationFrame(() => {
+         setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckData.items.length);
+       });
+       // Removed setTimeout logic
      }
    };
 
@@ -173,5 +174,3 @@ export default function ViewPage() {
      </div>
   );
 }
-
-    
