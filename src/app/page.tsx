@@ -50,6 +50,8 @@ export default function Home() {
   const [transitionStyle, setTransitionStyle] = useState<TransitionStyle>("transition-flip-down");
   const [isDragging, setIsDragging] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
+  // const [isTransitioning, setIsTransitioning] = useState(false); // Temporarily remove for debugging delay
+
 
   // Dummy user state - In a real app, this would come from auth context/hook
   // For testing owner view, change the email here or implement a way to simulate login
@@ -118,7 +120,7 @@ export default function Home() {
               setDeckItems(prev => [...prev, ...newItems]);
               // Only generate link if min images are met after adding new ones
               if (deckItems.length + newItems.length >= MIN_IMAGES) {
- generateShareables([...deckItems, ...newItems], transitionStyle);
+                 generateShareables([...deckItems, ...newItems], transitionStyle);
               } else {
                  setShareLink(null);
                  setEmbedCode(null);
@@ -164,14 +166,14 @@ export default function Home() {
     );
     setDeckItems(updatedItems);
      if (updatedItems.length >= MIN_IMAGES) {
- generateShareables(updatedItems, transitionStyle);
+         generateShareables(updatedItems, transitionStyle);
     }
   };
 
   const handleRemoveItem = (idToRemove: string) => {
       const newItems = deckItems.filter(item => item.id !== idToRemove);
       setDeckItems(newItems);
- if (newItems.length < MIN_IMAGES && deckItems.length >= MIN_IMAGES) {
+     if (newItems.length < MIN_IMAGES && deckItems.length >= MIN_IMAGES) {
         setShareLink(null);
         setEmbedCode(null);
         setCurrentCardIndex(0); // Reset index if below minimum
@@ -179,28 +181,29 @@ export default function Home() {
             title: "Minimum Images Required",
             description: `Please upload at least ${MIN_IMAGES} images to generate share links.`,
         });
-      } else {
+      } else if (newItems.length >= MIN_IMAGES) { // Ensure generation only happens if still >= MIN_IMAGES
         // Adjust index if the removed card was the last one and index is now out of bounds
-        setCurrentCardIndex(prevIndex => Math.min(prevIndex, newItems.length - 1));
- generateShareables(newItems, transitionStyle);
+        setCurrentCardIndex(prevIndex => Math.min(prevIndex, newItems.length > 0 ? newItems.length - 1 : 0));
+         generateShareables(newItems, transitionStyle);
+      } else {
+         // Reset index if below minimum and no toast was shown (e.g., removing from 2 to 1)
+        setCurrentCardIndex(0);
       }
   };
 
-  const handleCardTap = () => {
+  const handleCardTap = (e: React.MouseEvent<HTMLDivElement>) => {
     // Prevent transition if clicking the link icon by checking the event target
-    // This requires the event object, which is implicitly passed if this handler
-    // is directly used in an onClick={handleCardTap}. If used indirectly,
-    // make sure the event is passed down.
-    // Let's assume direct usage for now.
+     if ((e.target as HTMLElement).closest('.card-link-icon')) {
+       return;
+     }
 
-    // Example of checking target (might need adjustment based on actual structure):
-    // if ((e.target as HTMLElement).closest('.card-link-icon')) {
-    //   return;
-    // }
+    // Prevent transition if during CSS transition (using a simple check or a state flag)
+    // if (isTransitioning) return; // Re-enable if needed
 
     if (deckItems.length > 0) {
-      // Removed console.log
+      // setIsTransitioning(true); // Re-enable if needed
       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckItems.length);
+       // setTimeout(() => setIsTransitioning(false), 700); // Match CSS duration - Re-enable if needed
     }
   };
 
@@ -241,47 +244,74 @@ export default function Home() {
 
         let origin = '';
         try {
-           origin = window.location.origin;
+           // Ensure window exists (client-side)
+           if (typeof window !== 'undefined') {
+               origin = window.location.origin;
+           } else {
+               console.warn("window is not defined, cannot determine origin for share link.");
+               // Provide a fallback or handle server-side case if necessary
+               origin = 'YOUR_DEPLOYED_URL'; // Replace with your actual base URL
+           }
         } catch (error: any) {
            toast({ title: "Browser Error", description: "Could not determine site origin.", variant: "destructive" });
            return;
         }
         const shareUrl = `${origin}/view#${encodedData}`;
-        const embedHtml = `<iframe src="${shareUrl}" width="320" height="420" frameborder="0" allowfullscreen></iframe>`; // Adjust dimensions
+        const embedHtml = `<iframe src="${shareUrl}" width="320" height="420" style="border:none; border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" allowfullscreen title="DeckTap Deck"></iframe>`; // Added styles and title
         setShareLink(shareUrl);
         setEmbedCode(embedHtml);
-      } catch (error: any) { /* Generic catch for other potential errors within timeout */ }
+      } catch (error: any) {
+          toast({
+            title: "Error Generating Shareables",
+            description: error instanceof Error ? error.message : "An unknown error occurred.",
+            variant: "destructive",
+           });
+       }
     }, 300); // Adjust the delay (in milliseconds) as needed
   }, []);
 
-    // Define handleUpgrade before handleTransitionChange
+  // Define handleUpgrade before handleTransitionChange
   const handleUpgrade = useCallback(async () => { // Wrap in useCallback
     // In a real application, you would likely create a checkout session
     // on your backend and redirect the user to the Stripe hosted page.
     try {
+       let origin = '';
+        try {
+           // Ensure window exists (client-side)
+           if (typeof window !== 'undefined') {
+               origin = window.location.origin;
+           } else {
+              toast({ title: "Browser Error", description: "Cannot initiate upgrade without window context.", variant: "destructive" });
+               return;
+           }
+        } catch (error: any) {
+           toast({ title: "Browser Error", description: "Could not determine site origin for upgrade.", variant: "destructive" });
+           return;
+        }
+
       const response = await fetch('/api/stripe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          successUrl: `${window.location.origin}/?success=true`, // Redirect back here on success
-          origin: (() => {
-            try {
-              return window.location.origin;
-            } catch (error: any) {
-              toast({ title: "Browser Error", description: "Could not determine site origin for upgrade.", variant: "destructive" });
-              return ""; // Return empty string if origin is not available
-            }
-          })(), // Send origin for cancel URL construction
+          successUrl: `${origin}/?success=true`, // Redirect back here on success
+          origin: origin, // Send origin for cancel URL construction
         }),
 
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        window.location.href = data.url; // Redirect to Stripe Checkout page
+      if (response.ok && data.url) {
+         // Ensure window exists before redirecting
+         if (typeof window !== 'undefined') {
+             window.location.href = data.url; // Redirect to Stripe Checkout page
+         } else {
+             console.error("Cannot redirect without window object.");
+             toast({ title: "Upgrade Error", description: "Cannot redirect to checkout page.", variant: "destructive" });
+         }
+
       } else {
         toast({
           title: "Upgrade Failed",
@@ -322,23 +352,31 @@ export default function Home() {
 
   const copyToClipboard = (text: string | null, type: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text).then(() => {
-      toast({
-        title: `${type} Copied!`,
-        description: `${type} has been copied to your clipboard.`,
-      });
-    }).catch(err => {
-       toast({
-        title: "Copy Failed",
-        description: `Could not copy ${type}: ${err}`,
-        variant: "destructive",
-      });
-    });
+    // Ensure navigator exists (client-side)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+        toast({
+            title: `${type} Copied!`,
+            description: `${type} has been copied to your clipboard.`,
+        });
+        }).catch(err => {
+        toast({
+            title: "Copy Failed",
+            description: `Could not copy ${type}: ${err instanceof Error ? err.message : String(err)}`,
+            variant: "destructive",
+        });
+        });
+    } else {
+         toast({
+            title: "Copy Failed",
+            description: "Clipboard API not available in this environment.",
+            variant: "destructive",
+        });
+    }
   };
 
 
   const getCardClassName = (index: number): string => {
-    // Removed console.log
     const totalCards = deckItems.length;
     if (totalCards === 0) return '';
 
@@ -352,126 +390,200 @@ export default function Home() {
   };
 
   const generateStandaloneHtml = (items: DeckItem[], style: TransitionStyle): string => {
-    const itemHtml = items.map((item, index) => `
+    // Ensure items have valid data before proceeding
+    if (!items || items.length === 0 || !style) {
+        console.error("Invalid data passed to generateStandaloneHtml");
+        return ""; // Return empty string or throw an error
+    }
+
+    const itemHtml = items.map((item, index) => {
+        if (!item || !item.id || !item.imageUrl) {
+            console.warn(`Skipping invalid item at index ${index}`);
+            return ''; // Skip invalid items
+        }
+        return `
       <div
         id="card-${item.id}"
         class="card-item"
         data-index="${index}"
         data-link="${item.link || ''}"
-        style="z-index: ${items.length - index}; opacity: ${index === 0 ? 1 : 0};"
+        style="z-index: ${items.length - index}; opacity: ${index === 0 ? 1 : 0}; transform: translateZ(0px);"
       >
-        <img src="${item.imageUrl}" alt="Card ${index + 1}" />
+        <img src="${item.imageUrl}" alt="Card ${index + 1}" loading="lazy" />
         ${item.link ? `
           <button class="card-link-icon" aria-label="Open link in new tab" data-link="${item.link}">
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
           </button>
         ` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
+
+    if (!itemHtml) {
+        console.error("No valid items found to generate HTML.");
+        return "";
+    }
 
     // Fetch relevant CSS from globals.css (or define inline styles)
-    // NOTE: For simplicity, we'll include essential styles directly.
-    // A more robust solution might fetch and embed the CSS file or critical parts.
+    // NOTE: Including essential styles directly.
+    // A more robust solution might link to an external CSS file or embed critical parts.
     const css = `
-      body { margin: 0; background-color: hsl(120, 100%, 3%); display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Impact, Arial Black, sans-serif; }
+      :root { /* Define theme variables directly for standalone */
+        --background: 120 100% 3%;
+        --foreground: 48 100% 95%;
+        --card: 120 85% 5%;
+        --card-foreground: 48 100% 95%;
+        --primary: 51 100% 55%;
+        --primary-glow: 0 0 8px hsla(var(--primary), 0.5);
+        --accent: 51 80% 65%;
+        --border: 120 60% 12%;
+        --radius: 0.5rem;
+      }
+      body { margin: 0; background-color: hsl(var(--background)); display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Impact, Arial Black, sans-serif; }
       .card-stack-container { perspective: 1000px; position: relative; width: 300px; height: 400px; }
-      .card-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 0.5rem; overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid hsl(120, 60%, 12%); background-color: hsl(120, 85%, 5%); }
+      .card-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: var(--radius); overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid hsl(var(--border)); background-color: hsl(var(--card)); opacity: 0; pointer-events: none; /* Initially hidden */ }
+      .card-item.current, .card-item.next, .card-item.previous { pointer-events: auto; } /* Make relevant cards interactive */
       .card-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
-      .card-link-icon { position: absolute; bottom: 1rem; right: 1rem; padding: 0.5rem; background-color: hsla(var(--background, 120, 100%, 3%), 0.7); border-radius: 50%; color: hsl(var(--primary, 51, 100%, 55%)); z-index: 10; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; border: none; cursor: pointer; box-shadow: var(--primary-glow, 0 0 8px hsla(var(--primary, 51, 100%, 55%), 0.5)); display: flex; align-items: center; justify-content: center; }
-      .card-link-icon:hover { background-color: hsla(var(--background, 120, 100%, 3%), 0.9); color: hsl(var(--accent, 51, 80%, 65%)); }
+      .card-link-icon { position: absolute; bottom: 1rem; right: 1rem; padding: 0.5rem; background-color: hsla(var(--background), 0.7); border-radius: 50%; color: hsl(var(--primary)); z-index: 10; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; border: none; cursor: pointer; box-shadow: var(--primary-glow); display: flex; align-items: center; justify-content: center; pointer-events: auto !important; /* Ensure link icon is always clickable */ }
+      .card-link-icon:hover { background-color: hsla(var(--background), 0.9); color: hsl(var(--accent)); }
       .card-link-icon svg { width: 1.25rem; height: 1.25rem; }
-      .hidden-card { opacity: 0 !important; pointer-events: none; z-index: -1 !important; } /* Ensure non-visible cards are truly hidden and behind */
-      /* Add transition styles based on 'style' parameter */
-      /* Base state for current card (applied by default or through JS) */
+      .hidden-card { opacity: 0 !important; transform: scale(0.8) !important; pointer-events: none !important; z-index: -1 !important; } /* Ensure non-visible cards are truly hidden */
+
+      /* --- Transition Styles --- */
+      /* Base state for current card */
       .card-item.current { transform: translateZ(0px); opacity: 1; z-index: 2; }
 
       /* Flip Down */
       .transition-flip-down .card-item { transform-origin: top center; }
       .transition-flip-down .card-item.next { transform: rotateX(-90deg) translateZ(-20px) translateY(-20px); opacity: 0; z-index: 1; }
-      .transition-flip-down .card-item.current { transform: rotateX(0deg) translateZ(0); opacity: 1; z-index: 2; }
       .transition-flip-down .card-item.previous { transform: rotateX(90deg) translateZ(-20px) translateY(20px); opacity: 0; z-index: 0; }
 
       /* Flip Behind */
       .transition-flip-behind .card-item { transform-origin: center center; }
       .transition-flip-behind .card-item.next { transform: rotateY(180deg) translateZ(-50px); opacity: 0; z-index: 1; }
-      .transition-flip-behind .card-item.current { transform: rotateY(0deg) translateZ(0); opacity: 1; z-index: 2; }
       .transition-flip-behind .card-item.previous { transform: rotateY(-180deg) translateZ(-50px); opacity: 0; z-index: 0; }
 
       /* Slide Fade */
       .transition-slide-fade .card-item { transform-origin: center center; }
       .transition-slide-fade .card-item.next { transform: translateX(100%) translateY(-20px) scale(0.9); opacity: 0; z-index: 1; }
-      .transition-slide-fade .card-item.current { transform: translateX(0%) translateY(0) scale(1); opacity: 1; z-index: 2; }
       .transition-slide-fade .card-item.previous { transform: translateX(-100%) translateY(-20px) scale(0.9); opacity: 0; z-index: 0; }
 
       /* Lift Up/Drop Down */
       .transition-lift-drop .card-item { transform-origin: center bottom; }
       .transition-lift-drop .card-item.next { transform: translateY(-100%) translateZ(-30px); opacity: 0; z-index: 1; }
-      .transition-lift-drop .card-item.current { transform: translateY(0) translateZ(0); opacity: 1; z-index: 2; }
       .transition-lift-drop .card-item.previous { transform: translateY(100%) translateZ(-30px); opacity: 0; z-index: 0; }
 
       /* Flip + Dissolve */
       .transition-flip-dissolve .card-item { transform-origin: center center; }
       .transition-flip-dissolve .card-item.next { transform: rotateY(90deg) scale(0.8); opacity: 0; z-index: 1; }
-      .transition-flip-dissolve .card-item.current { transform: rotateY(0deg) scale(1); opacity: 1; z-index: 2; }
       .transition-flip-dissolve .card-item.previous { transform: rotateY(-90deg) scale(0.8); opacity: 0; z-index: 0; }
-
     `;
 
     const script = `
-      let currentCardIndex = 0;
-      const items = JSON.parse('${JSON.stringify(items)}'); // Pass items data
-      const totalCards = items.length;
-      const container = document.getElementById('deck-viewer-standalone');
-      let isTransitioning = false; // Flag to prevent rapid clicks
+      document.addEventListener('DOMContentLoaded', () => {
+          let currentCardIndex = 0;
+          // Parse items safely, providing an empty array as fallback
+          let items = [];
+          try {
+            items = JSON.parse('${JSON.stringify(items)}');
+            if (!Array.isArray(items)) throw new Error("Parsed data is not an array");
+          } catch (e) {
+            console.error("Failed to parse items data:", e);
+            // Handle error, maybe show a message to the user
+            return; // Stop execution if data is invalid
+          }
 
-      function getCardClass(index, currentIndex) {
-          const normalizedIndex = (index - currentIndex + totalCards) % totalCards;
-          if (normalizedIndex === 0) return "current";
-          if (normalizedIndex === 1) return "next";
-          if (normalizedIndex === totalCards - 1) return "previous";
-          return "hidden-card";
-      }
+          const totalCards = items.length;
+          const container = document.getElementById('deck-viewer-standalone');
+          if (!container) {
+              console.error("Container element not found.");
+              return; // Stop if container is missing
+          }
+          if (totalCards === 0) {
+              console.warn("No cards to display.");
+              container.innerHTML = '<p style="color: hsl(var(--foreground));">No cards in this deck.</p>';
+              return; // Stop if no cards
+          }
 
-      function updateCards() {
-          if (!container || isTransitioning) return; // Prevent update during transition
-          isTransitioning = true;
+          let isTransitioning = false; // Flag to prevent rapid clicks
 
-          const cardElements = container.querySelectorAll('.card-item');
-          cardElements.forEach((card, index) => {
-              card.className = 'card-item ' + getCardClass(index, currentCardIndex);
-               // Z-index is primarily handled by CSS based on class now
+          function getCardClass(index, currentIndex) {
+              if (totalCards === 0) return 'hidden-card'; // Handle empty case
+              const normalizedIndex = (index - currentIndex + totalCards) % totalCards;
+              if (normalizedIndex === 0) return "current";
+              if (normalizedIndex === 1 || totalCards === 1) return "next"; // Ensure 'next' is assigned even with 1 card
+              if (normalizedIndex === totalCards - 1) return "previous";
+              return "hidden-card";
+          }
+
+          function updateCards() {
+              if (!container || isTransitioning) return;
+              isTransitioning = true;
+
+              const cardElements = container.querySelectorAll('.card-item');
+              cardElements.forEach((card, index) => {
+                  if (card instanceof HTMLElement) { // Type guard
+                      card.className = 'card-item ' + getCardClass(index, currentCardIndex);
+                      // Optional: Re-apply initial transform for non-current cards if needed by transitions
+                      if (getCardClass(index, currentCardIndex) !== 'current') {
+                          // card.style.transform = 'translateZ(0px)'; // Reset if needed
+                      }
+                  }
+              });
+
+              // Update opacity and z-index directly based on class for clarity
+              const currentCard = container.querySelector('.card-item.current');
+              if (currentCard instanceof HTMLElement) {
+                  currentCard.style.opacity = '1';
+                  currentCard.style.zIndex = '2';
+              }
+               const nextCard = container.querySelector('.card-item.next');
+               if (nextCard instanceof HTMLElement) {
+                   nextCard.style.opacity = '0'; // Will be faded in by CSS transition if it becomes current
+                   nextCard.style.zIndex = '1';
+               }
+                const prevCard = container.querySelector('.card-item.previous');
+               if (prevCard instanceof HTMLElement) {
+                   prevCard.style.opacity = '0';
+                   prevCard.style.zIndex = '0';
+               }
+               container.querySelectorAll('.card-item.hidden-card').forEach(card => {
+                   if (card instanceof HTMLElement) {
+                       card.style.opacity = '0';
+                       card.style.zIndex = '-1';
+                   }
+               });
+
+
+              setTimeout(() => {
+                  isTransitioning = false;
+              }, 700); // Match CSS transition duration
+          }
+
+          container.addEventListener('click', (e) => {
+              if (isTransitioning) return;
+
+              const linkButton = (e.target as HTMLElement).closest('.card-link-icon');
+              if (linkButton instanceof HTMLElement) {
+                  const link = linkButton.getAttribute('data-link');
+                  if (link) {
+                      e.stopPropagation();
+                      window.open(link, '_blank', 'noopener,noreferrer');
+                  }
+              } else if ((e.target as HTMLElement).closest('.card-item.current')) { // Only transition if current card is clicked
+                  if (totalCards > 1) { // Only advance if there's more than one card
+                    currentCardIndex = (currentCardIndex + 1) % totalCards;
+                    updateCards();
+                  }
+              }
           });
 
-          // Allow CSS transition to complete before enabling clicks again
-           setTimeout(() => {
-             isTransitioning = false;
-           }, 700); // Match CSS transition duration
-      }
-
-      container.addEventListener('click', (e) => {
-          if (isTransitioning) return; // Ignore clicks during transition
-
-          if (e.target.closest('.card-link-icon')) {
-              // Handle link click
-              const button = e.target.closest('.card-link-icon');
-              const link = button.getAttribute('data-link');
-              if (link) {
-                   e.stopPropagation(); // Prevent card transition
-                   window.open(link, '_blank', 'noopener,noreferrer');
-              }
-          } else if (e.target.closest('.card-item')) {
-              // Handle card tap for transition
-              currentCardIndex = (currentCardIndex + 1) % totalCards;
-              updateCards();
-          }
+          // Initial setup
+          updateCards(); // Run once to set initial classes and styles
       });
-
-       // Add event listeners for link icons after initial setup (already handled by container listener)
-
-      // Initial setup
-      updateCards(); // Run once to set initial classes
     `;
 
+    // Ensure DOCTYPE is present
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -499,21 +611,65 @@ export default function Home() {
        return;
      }
 
-     const htmlContent = generateStandaloneHtml(deckItems, transitionStyle);
-     const blob = new Blob([htmlContent], { type: 'text/html' });
-     const url = URL.createObjectURL(blob);
-     const link = document.createElement('a');
-     link.href = url;
-     link.download = 'decktap-deck.html';
-     document.body.appendChild(link);
-     link.click();
-     document.body.removeChild(link);
-     URL.revokeObjectURL(url);
+     let htmlContent = '';
+     try {
+         htmlContent = generateStandaloneHtml(deckItems, transitionStyle);
+         if (!htmlContent) {
+             throw new Error("Generated HTML content is empty.");
+         }
+     } catch (error: any) {
+          toast({
+             title: "Error Generating HTML",
+             description: `Could not generate the deck HTML: ${error.message}`,
+             variant: "destructive",
+           });
+           return; // Stop if HTML generation failed
+     }
 
-     toast({
-        title: "Download Started",
-        description: "Your standalone deck HTML file is downloading.",
-     });
+
+     let blob: Blob;
+      try {
+        blob = new Blob([htmlContent], { type: 'text/html' });
+      } catch (error: any) {
+         toast({
+           title: "Error Creating File",
+           description: `Could not create the file blob: ${error.message}`,
+           variant: "destructive",
+         });
+         return;
+       }
+
+
+     let url: string | null = null;
+     let link: HTMLAnchorElement | null = null;
+
+     try {
+        url = URL.createObjectURL(blob);
+        link = document.createElement('a');
+        link.href = url;
+        link.download = 'decktap-deck.html';
+        document.body.appendChild(link);
+        link.click();
+
+        toast({
+            title: "Download Started",
+            description: "Your standalone deck HTML file is downloading.",
+        });
+     } catch (error: any) {
+        toast({
+         title: "Download Failed",
+         description: `Could not initiate the download: ${error.message}`,
+         variant: "destructive",
+       });
+     } finally {
+         // Cleanup: Remove the link and revoke the object URL
+         if (link && document.body.contains(link)) {
+            document.body.removeChild(link);
+         }
+         if (url) {
+            URL.revokeObjectURL(url);
+         }
+     }
    };
 
 
@@ -549,7 +705,7 @@ export default function Home() {
             />
             <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              {isDragging ? "Drop images here" : `Drag & drop ${MAX_IMAGES - deckItems.length} more images or click to upload`}
+              {isDragging ? "Drop images here" : `Drag & drop ${deckItems.length < MAX_IMAGES ? MAX_IMAGES - deckItems.length : 0} more image(s) or click to upload`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Max {MAX_IMAGES} images. ({MIN_IMAGES} minimum required)</p>
              {deckItems.length >= MAX_IMAGES && <p className="text-destructive text-sm mt-2">Maximum images reached.</p>}
@@ -568,8 +724,9 @@ export default function Home() {
                     value={item.link}
                     onChange={(e) => handleLinkChange(item.id, e.target.value)}
                     className="flex-grow text-sm h-8"
+                    aria-label={`Link for card ${item.id}`} // Accessibility
                   />
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemoveItem(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemoveItem(item.id)} aria-label={`Remove card ${item.id}`}>
                       <X className="h-4 w-4"/>
                        <span className="sr-only">Remove Item</span>
                   </Button>
@@ -602,26 +759,31 @@ export default function Home() {
                  </SelectItem>
               </SelectContent>
             </Select>
+             {!isOwner && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 pt-1">
+                <Crown className="inline-block w-3 h-3 text-primary" /> Upgrade to unlock premium styles.
+              </p>
+            )}
           </div>
         </CardContent>
         {/* Upgrade Button (Visible if not owner) */}
         {!isOwner && (
-          <CardFooter className="flex justify-center pt-0">
-            <Button onClick={handleUpgrade} className="w-full flex items-center gap-2"><Crown className="w-5 h-5"/> Unlock Premium Animations</Button>
- </CardFooter>
+          <CardFooter className="flex justify-center pt-0 border-t border-border mt-4">
+            <Button onClick={handleUpgrade} className="w-full flex items-center gap-2 mt-4"><Crown className="w-5 h-5"/> Unlock Premium Animations</Button>
+         </CardFooter>
         )}
-         <CardFooter className="flex-col items-start gap-4">
+         <CardFooter className="flex-col items-start gap-4 pt-4 border-t border-border">
              {/* Share Section */}
              {deckItems.length >= MIN_IMAGES && (
-                 <div className="w-full space-y-4 pt-4 border-t border-border">
+                 <div className="w-full space-y-4">
                     {/* Apply text-primary class for glow effect */}
                     <h3 className="text-lg font-medium font-heading flex items-center gap-2 text-primary"><Share2 className="w-5 h-5 text-primary"/> Share Your Deck</h3>
                     {shareLink && (
                         <div className="space-y-2">
                             <Label htmlFor="share-link">Share Link</Label>
                             <div className="flex gap-2">
-                                <Input id="share-link" value={shareLink} readOnly className="bg-muted" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')}>
+                                <Input id="share-link" value={shareLink} readOnly className="bg-muted flex-grow" />
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')} aria-label="Copy Share Link">
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Link</span>
                                 </Button>
@@ -632,8 +794,8 @@ export default function Home() {
                         <div className="space-y-2">
                             <Label htmlFor="embed-code">Embed Code</Label>
                             <div className="flex gap-2 items-start">
-                                <Textarea id="embed-code" value={embedCode} readOnly rows={3} className="bg-muted text-xs resize-none" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px">
+                                <Textarea id="embed-code" value={embedCode} readOnly rows={3} className="bg-muted text-xs resize-none flex-grow" />
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px flex-shrink-0" aria-label="Copy Embed Code">
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Embed Code</span>
                                 </Button>
@@ -648,35 +810,43 @@ export default function Home() {
                 </div>
             )}
            {deckItems.length < MIN_IMAGES && deckItems.length > 0 && (
-                 <p className="text-sm text-muted-foreground">Upload at least {MIN_IMAGES} images to generate share links and download.</p>
+                 <p className="text-sm text-muted-foreground pt-4">Upload at least {MIN_IMAGES} images to generate share links and download.</p>
+            )}
+            {deckItems.length === 0 && (
+                <p className="text-sm text-muted-foreground pt-4">Upload images to create and share your deck.</p>
             )}
          </CardFooter>
       </Card>
 
       {/* Right Column: Card Preview */}
-      <div className="w-full lg:w-2/3 flex items-center justify-center p-4 lg:p-16">
+      <div className="w-full lg:w-2/3 flex items-center justify-center p-4 lg:p-16 min-h-[450px]"> {/* Added min-height */}
          {deckItems.length > 0 ? (
              <div className={cn("card-stack-container", transitionStyle)} onClick={handleCardTap}>
                 {deckItems.map((item, index) => (
                 <div
                     key={item.id}
                     className={cn("card-item", getCardClassName(index))}
-                    // Let CSS handle z-index based on class for smoother transitions
                     data-ai-hint="card background"
+                    role="button" // Indicate it's clickable
+                    tabIndex={index === currentCardIndex ? 0 : -1} // Make current card focusable
+                    aria-label={`Card ${index + 1}. Tap to view next card.`}
                 >
                     <Image
                      src={item.imageUrl}
                      alt={`Card ${index + 1}`}
                      fill // Use fill for better responsiveness within the container
+                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Provide sizes for optimization
                      style={{ objectFit: 'cover' }} // Ensure image covers the card area
                      priority={index === currentCardIndex} // Prioritize loading the current image
-                     unoptimized // Use unoptimized if images are data URIs to avoid Next.js optimization issues
+                     // Consider removing unoptimized if images are not always data URIs
+                     // unoptimized
                     />
                     {item.link && (
                         <button
                             className="card-link-icon"
                             onClick={(e) => handleLinkIconClick(e, item.link)}
                             aria-label="Open link in new tab"
+                            tabIndex={index === currentCardIndex ? 0 : -1} // Make link focusable only on current card
                         >
                             <LinkIcon className="h-5 w-5" />
                         </button>
@@ -686,13 +856,13 @@ export default function Home() {
              </div>
             ) : (
              <div className="w-[300px] h-[400px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                {/* Updated the empty state button text */}
                 <Button className="mb-4" onClick={() => fileInputRef.current?.click()}>Upload Images</Button>
                 <p className="text-sm empty-state-text mb-4">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
-                {/* Removed download button from empty state as it requires images */}
-            </div>
+             </div>
             )}
       </div>
     </div>
   );
 }
+
+    
