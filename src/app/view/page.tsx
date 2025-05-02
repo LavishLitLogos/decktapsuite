@@ -31,6 +31,7 @@ export default function ViewPage() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false); // Add transition flag
 
   // Read data from hash fragment on client-side mount
   useEffect(() => {
@@ -66,13 +67,16 @@ export default function ViewPage() {
 
 
   const handleCardTap = (e: React.MouseEvent<HTMLDivElement>) => {
-     if ((e.target as HTMLElement).closest('.card-link-icon')) {
-      return; // Prevent transition if clicking the link icon
-    }
-    if (deckData && deckData.items.length > 0) {
-      setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckData.items.length);
-    }
-  };
+     if (isTransitioning || (e.target as HTMLElement).closest('.card-link-icon')) {
+       return; // Prevent transition if clicking the link icon or during transition
+     }
+     if (deckData && deckData.items.length > 0) {
+       setIsTransitioning(true); // Set flag
+       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckData.items.length);
+       // Reset flag after transition duration
+       setTimeout(() => setIsTransitioning(false), 700); // Match CSS duration
+     }
+   };
 
   const handleLinkIconClick = (e: React.MouseEvent<HTMLButtonElement>, link: string) => {
     e.stopPropagation(); // Prevent card tap event
@@ -126,7 +130,6 @@ export default function ViewPage() {
                 className={cn("card-item", getCardClassName(index))}
                 onClick={handleCardTap}
                 // Let CSS handle z-index based on class for smoother transitions
-                // style={{ zIndex: deckData.items.length - Math.abs(currentCardIndex - index) }}
                 data-ai-hint="shared card background"
             >
             <Image

@@ -187,11 +187,23 @@ export default function Home() {
   };
 
   const handleCardTap = () => {
+    // Prevent transition if clicking the link icon by checking the event target
+    // This requires the event object, which is implicitly passed if this handler
+    // is directly used in an onClick={handleCardTap}. If used indirectly,
+    // make sure the event is passed down.
+    // Let's assume direct usage for now.
+
+    // Example of checking target (might need adjustment based on actual structure):
+    // if ((e.target as HTMLElement).closest('.card-link-icon')) {
+    //   return;
+    // }
+
     if (deckItems.length > 0) {
- console.log("handleCardTap called, currentCardIndex:", currentCardIndex);
+      // Removed console.log
       setCurrentCardIndex((prevIndex) => (prevIndex + 1) % deckItems.length);
     }
   };
+
 
    const handleLinkIconClick = (e: React.MouseEvent<HTMLButtonElement>, link: string) => {
     e.stopPropagation(); // Prevent card tap event
@@ -242,7 +254,7 @@ export default function Home() {
     }, 300); // Adjust the delay (in milliseconds) as needed
   }, []);
 
-  // Define handleUpgrade before handleTransitionChange
+    // Define handleUpgrade before handleTransitionChange
   const handleUpgrade = useCallback(async () => { // Wrap in useCallback
     // In a real application, you would likely create a checkout session
     // on your backend and redirect the user to the Stripe hosted page.
@@ -282,6 +294,7 @@ export default function Home() {
     }
   }, []); // Empty dependency array as it doesn't depend on component state directly
 
+
    const handleTransitionChange = useCallback((value: string) => { // Changed parameter type to string
     if (!isOwner && PREMIUM_TRANSITIONS.includes(value as TransitionStyle)) {
         toast({
@@ -304,7 +317,7 @@ export default function Home() {
             generateShareables(deckItems, newStyle);
         }
     }, 300); // Adjust the delay (in milliseconds) as needed
-  }, [deckItems, generateShareables, isOwner]); // Removed handleUpgrade from dependency array
+  }, [deckItems, generateShareables, isOwner, handleUpgrade]); // Added handleUpgrade to dependency array
 
 
   const copyToClipboard = (text: string | null, type: string) => {
@@ -325,7 +338,7 @@ export default function Home() {
 
 
   const getCardClassName = (index: number): string => {
- console.log("getCardClassName called for index:", index);
+    // Removed console.log
     const totalCards = deckItems.length;
     if (totalCards === 0) return '';
 
@@ -360,31 +373,48 @@ export default function Home() {
     // NOTE: For simplicity, we'll include essential styles directly.
     // A more robust solution might fetch and embed the CSS file or critical parts.
     const css = `
-      body { margin: 0; background-color: #081408; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Impact, Arial Black, sans-serif; }
+      body { margin: 0; background-color: hsl(120, 100%, 3%); display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Impact, Arial Black, sans-serif; }
       .card-stack-container { perspective: 1000px; position: relative; width: 300px; height: 400px; }
-      .card-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 0.5rem; overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #1f3d1f; background-color: #0d1a0d; }
+      .card-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 0.5rem; overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid hsl(120, 60%, 12%); background-color: hsl(120, 85%, 5%); }
       .card-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
-      .card-link-icon { position: absolute; bottom: 1rem; right: 1rem; padding: 0.5rem; background-color: rgba(8, 20, 8, 0.7); border-radius: 50%; color: #ffdb58; z-index: 10; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; border: none; cursor: pointer; box-shadow: 0 0 8px hsla(51, 100%, 55%, 0.5); display: flex; align-items: center; justify-content: center; }
-      .card-link-icon:hover { background-color: rgba(8, 20, 8, 0.9); color: #ffe791; }
+      .card-link-icon { position: absolute; bottom: 1rem; right: 1rem; padding: 0.5rem; background-color: hsla(var(--background, 120, 100%, 3%), 0.7); border-radius: 50%; color: hsl(var(--primary, 51, 100%, 55%)); z-index: 10; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; border: none; cursor: pointer; box-shadow: var(--primary-glow, 0 0 8px hsla(var(--primary, 51, 100%, 55%), 0.5)); display: flex; align-items: center; justify-content: center; }
+      .card-link-icon:hover { background-color: hsla(var(--background, 120, 100%, 3%), 0.9); color: hsl(var(--accent, 51, 80%, 65%)); }
       .card-link-icon svg { width: 1.25rem; height: 1.25rem; }
- .hidden-card { opacity: 0 !important; pointer-events: none; } /* Ensure non-visible cards are truly hidden */
+      .hidden-card { opacity: 0 !important; pointer-events: none; z-index: -1 !important; } /* Ensure non-visible cards are truly hidden and behind */
       /* Add transition styles based on 'style' parameter */
-      .${style} .card-item.current { transform: rotateX(0deg) translateZ(0); opacity: 1; z-index: 2; }
-      /* Include all transition variations from globals.css here, prefixing with .${style} */
+      /* Base state for current card (applied by default or through JS) */
+      .card-item.current { transform: translateZ(0px); opacity: 1; z-index: 2; }
+
+      /* Flip Down */
+      .transition-flip-down .card-item { transform-origin: top center; }
       .transition-flip-down .card-item.next { transform: rotateX(-90deg) translateZ(-20px) translateY(-20px); opacity: 0; z-index: 1; }
+      .transition-flip-down .card-item.current { transform: rotateX(0deg) translateZ(0); opacity: 1; z-index: 2; }
       .transition-flip-down .card-item.previous { transform: rotateX(90deg) translateZ(-20px) translateY(20px); opacity: 0; z-index: 0; }
+
+      /* Flip Behind */
       .transition-flip-behind .card-item { transform-origin: center center; }
       .transition-flip-behind .card-item.next { transform: rotateY(180deg) translateZ(-50px); opacity: 0; z-index: 1; }
+      .transition-flip-behind .card-item.current { transform: rotateY(0deg) translateZ(0); opacity: 1; z-index: 2; }
       .transition-flip-behind .card-item.previous { transform: rotateY(-180deg) translateZ(-50px); opacity: 0; z-index: 0; }
+
+      /* Slide Fade */
       .transition-slide-fade .card-item { transform-origin: center center; }
       .transition-slide-fade .card-item.next { transform: translateX(100%) translateY(-20px) scale(0.9); opacity: 0; z-index: 1; }
+      .transition-slide-fade .card-item.current { transform: translateX(0%) translateY(0) scale(1); opacity: 1; z-index: 2; }
       .transition-slide-fade .card-item.previous { transform: translateX(-100%) translateY(-20px) scale(0.9); opacity: 0; z-index: 0; }
+
+      /* Lift Up/Drop Down */
       .transition-lift-drop .card-item { transform-origin: center bottom; }
       .transition-lift-drop .card-item.next { transform: translateY(-100%) translateZ(-30px); opacity: 0; z-index: 1; }
+      .transition-lift-drop .card-item.current { transform: translateY(0) translateZ(0); opacity: 1; z-index: 2; }
       .transition-lift-drop .card-item.previous { transform: translateY(100%) translateZ(-30px); opacity: 0; z-index: 0; }
+
+      /* Flip + Dissolve */
       .transition-flip-dissolve .card-item { transform-origin: center center; }
       .transition-flip-dissolve .card-item.next { transform: rotateY(90deg) scale(0.8); opacity: 0; z-index: 1; }
+      .transition-flip-dissolve .card-item.current { transform: rotateY(0deg) scale(1); opacity: 1; z-index: 2; }
       .transition-flip-dissolve .card-item.previous { transform: rotateY(-90deg) scale(0.8); opacity: 0; z-index: 0; }
+
     `;
 
     const script = `
@@ -392,6 +422,7 @@ export default function Home() {
       const items = JSON.parse('${JSON.stringify(items)}'); // Pass items data
       const totalCards = items.length;
       const container = document.getElementById('deck-viewer-standalone');
+      let isTransitioning = false; // Flag to prevent rapid clicks
 
       function getCardClass(index, currentIndex) {
           const normalizedIndex = (index - currentIndex + totalCards) % totalCards;
@@ -402,45 +433,24 @@ export default function Home() {
       }
 
       function updateCards() {
+          if (!container || isTransitioning) return; // Prevent update during transition
+          isTransitioning = true;
+
           const cardElements = container.querySelectorAll('.card-item');
           cardElements.forEach((card, index) => {
               card.className = 'card-item ' + getCardClass(index, currentCardIndex);
-              // Ensure correct z-index and initial opacity/transform based on class
-               const cardClass = getCardClass(index, currentCardIndex);
-               card.style.zIndex = totalCards - Math.abs(currentCardIndex - index); // Basic z-index
-               if (cardClass === 'current') {
-                   card.style.opacity = '1';
-                   // Apply current transform based on transition style if needed (e.g., translateZ(0))
-                   if (container.classList.contains('transition-flip-down')) card.style.transform = 'rotateX(0deg) translateZ(0)';
-                   else if (container.classList.contains('transition-flip-behind')) card.style.transform = 'rotateY(0deg) translateZ(0)';
-                   else if (container.classList.contains('transition-slide-fade')) card.style.transform = 'translateX(0%) translateY(0) scale(1)';
-                    else if (container.classList.contains('transition-lift-drop')) card.style.transform = 'translateY(0) translateZ(0)';
-                    else if (container.classList.contains('transition-flip-dissolve')) card.style.transform = 'rotateY(0deg) scale(1)';
-
-               } else if (cardClass === 'next') {
-                   card.style.opacity = '0'; // Keep next initially invisible or use specific transition start state
-                   // Apply next transform based on transition style
-                   if (container.classList.contains('transition-flip-down')) card.style.transform = 'rotateX(-90deg) translateZ(-20px) translateY(-20px)';
-                   else if (container.classList.contains('transition-flip-behind')) card.style.transform = 'rotateY(180deg) translateZ(-50px)';
-                    else if (container.classList.contains('transition-slide-fade')) card.style.transform = 'translateX(100%) translateY(-20px) scale(0.9)';
-                    else if (container.classList.contains('transition-lift-drop')) card.style.transform = 'translateY(-100%) translateZ(-30px)';
-                    else if (container.classList.contains('transition-flip-dissolve')) card.style.transform = 'rotateY(90deg) scale(0.8)';
-               } else if (cardClass === 'previous') {
-                    card.style.opacity = '0';
-                   // Apply previous transform based on transition style
-                   if (container.classList.contains('transition-flip-down')) card.style.transform = 'rotateX(90deg) translateZ(-20px) translateY(20px)';
-                    else if (container.classList.contains('transition-flip-behind')) card.style.transform = 'rotateY(-180deg) translateZ(-50px)';
-                    else if (container.classList.contains('transition-slide-fade')) card.style.transform = 'translateX(-100%) translateY(-20px) scale(0.9)';
-                    else if (container.classList.contains('transition-lift-drop')) card.style.transform = 'translateY(100%) translateZ(-30px)';
-                    else if (container.classList.contains('transition-flip-dissolve')) card.style.transform = 'rotateY(-90deg) scale(0.8)';
-               } else {
-                  card.style.opacity = '0'; // Hidden cards
-                  card.style.transform = 'scale(0.8)'; // Example hidden state
-               }
+               // Z-index is primarily handled by CSS based on class now
           });
+
+          // Allow CSS transition to complete before enabling clicks again
+           setTimeout(() => {
+             isTransitioning = false;
+           }, 700); // Match CSS transition duration
       }
 
       container.addEventListener('click', (e) => {
+          if (isTransitioning) return; // Ignore clicks during transition
+
           if (e.target.closest('.card-link-icon')) {
               // Handle link click
               const button = e.target.closest('.card-link-icon');
@@ -456,20 +466,10 @@ export default function Home() {
           }
       });
 
-       // Add event listeners for link icons after initial setup
-      container.querySelectorAll('.card-link-icon').forEach(icon => {
-          icon.addEventListener('click', (e) => {
-               const link = icon.getAttribute('data-link');
-               if (link) {
-                   e.stopPropagation(); // Prevent card transition
-                   window.open(link, '_blank', 'noopener,noreferrer');
-               }
-          });
-       });
-
+       // Add event listeners for link icons after initial setup (already handled by container listener)
 
       // Initial setup
-      updateCards();
+      updateCards(); // Run once to set initial classes
     `;
 
     return `<!DOCTYPE html>
@@ -561,7 +561,7 @@ export default function Home() {
               <h3 className="text-lg font-medium font-heading">Your Cards ({deckItems.length}/{MAX_IMAGES})</h3>
               {deckItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 p-2 border rounded-md bg-card/80">
-                  <Image src={item.imageUrl} alt="Uploaded thumbnail" width={40} height={40} className="rounded object-cover fade-in-item" />
+                  <Image src={item.imageUrl} alt="Uploaded thumbnail" width={40} height={40} className="rounded object-cover" />
                   <Input
                     type="url"
                     placeholder="https://"
@@ -569,7 +569,7 @@ export default function Home() {
                     onChange={(e) => handleLinkChange(item.id, e.target.value)}
                     className="flex-grow text-sm h-8"
                   />
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 ripple" onClick={() => handleRemoveItem(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemoveItem(item.id)}>
                       <X className="h-4 w-4"/>
                        <span className="sr-only">Remove Item</span>
                   </Button>
@@ -621,7 +621,7 @@ export default function Home() {
                             <Label htmlFor="share-link">Share Link</Label>
                             <div className="flex gap-2">
                                 <Input id="share-link" value={shareLink} readOnly className="bg-muted" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')} className="ripple">
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, 'Link')}>
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Link</span>
                                 </Button>
@@ -633,7 +633,7 @@ export default function Home() {
                             <Label htmlFor="embed-code">Embed Code</Label>
                             <div className="flex gap-2 items-start">
                                 <Textarea id="embed-code" value={embedCode} readOnly rows={3} className="bg-muted text-xs resize-none" />
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px ripple">
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')} className="mt-px">
                                     <Copy className="h-4 w-4" />
                                     <span className="sr-only">Copy Embed Code</span>
                                 </Button>
@@ -641,7 +641,7 @@ export default function Home() {
                         </div>
                     )}
                      {/* Download Button */}
-                    <Button onClick={handleDownload} variant="outline" className="w-full ripple">
+                    <Button onClick={handleDownload} variant="outline" className="w-full">
                         <Download className="mr-2 h-4 w-4" />
                         Download Standalone HTML
                     </Button>
@@ -661,7 +661,6 @@ export default function Home() {
                 <div
                     key={item.id}
                     className={cn("card-item", getCardClassName(index))}
-                    // style={{ zIndex: deckItems.length - Math.abs(currentCardIndex - index)}} // Basic z-index logic
                     // Let CSS handle z-index based on class for smoother transitions
                     data-ai-hint="card background"
                 >
@@ -676,7 +675,7 @@ export default function Home() {
                     {item.link && (
                         <button
                             className="card-link-icon"
- onClick={(e) => handleLinkIconClick(e, item.link)}
+                            onClick={(e) => handleLinkIconClick(e, item.link)}
                             aria-label="Open link in new tab"
                         >
                             <LinkIcon className="h-5 w-5" />
@@ -687,14 +686,10 @@ export default function Home() {
              </div>
             ) : (
              <div className="w-[300px] h-[400px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                <Button className="mb-4 ripple empty-state-text" onClick={() => handleCardTap(null)}>Tap Your Deck</Button>
+                {/* Updated the empty state button text */}
+                <Button className="mb-4" onClick={() => fileInputRef.current?.click()}>Upload Images</Button>
                 <p className="text-sm empty-state-text mb-4">Upload {MIN_IMAGES}-{MAX_IMAGES} images to get started.</p>
-                {deckItems.length >= MIN_IMAGES && (
-                  <Button variant="outline" className="ripple empty-state-text" onClick={handleDownload}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                  </Button>
-                )}
+                {/* Removed download button from empty state as it requires images */}
             </div>
             )}
       </div>
